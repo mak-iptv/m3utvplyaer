@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3U Player Admin - Vercel</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        /* Same CSS as before, but update API endpoints */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📺 M3U Player Admin (Vercel)</h1>
+            <p>Manage devices and playlists</p>
+        </header>
+        
+        <input type="password" id="adminToken" placeholder="Enter admin token">
+        <button onclick="login()">Login</button>
+        
+        <div id="dashboard" style="display: none;">
+            <!-- Dashboard content same as before -->
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api'; // Vercel route
+        
+        let adminToken = '';
+        
+        function login() {
+            adminToken = document.getElementById('adminToken').value;
+            document.getElementById('dashboard').style.display = 'block';
+            loadDevices();
+        }
+        
+        async function loadDevices() {
+            try {
+                const response = await axios.get(`${API_BASE}/devices`, {
+                    headers: { 'X-Admin-Token': adminToken }
+                });
+                
+                // Render devices as before
+                console.log('Devices loaded:', response.data);
+                
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                alert('Error: ' + error.response?.data?.error || error.message);
+            }
+        }
+        
+        // Rest of the JavaScript same as before
+        // Just update API endpoints to use ${API_BASE}/endpoint
+    </script>
+</body>
+</html>

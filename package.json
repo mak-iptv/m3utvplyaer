@@ -1,0 +1,22 @@
+{
+  name m3u-player-backend,
+  version 1.0.0,
+  description M3U Player Backend for Vercel,
+  main index.js,
+  scripts {
+    start node index.js,
+    dev vercel dev
+  },
+  dependencies {
+    express ^4.18.2,
+    cors ^2.8.5,
+    dotenv ^16.0.3,
+    mysql2 ^3.2.0,
+    bcryptjs ^2.4.3,
+    jsonwebtoken ^9.0.0,
+    uuid ^9.0.0
+  },
+  devDependencies {
+    vercel ^28.16.0
+  }
+}
