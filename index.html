@@ -69,7 +69,41 @@
                             <i class="fas fa-history"></i> Ngarko të dhëna të ruajtura
                         </button>
                     </div>
-                    
+                    <!-- Në login form, pas login-buttons -->
+<div class="advanced-settings">
+    <details>
+        <summary><i class="fas fa-cogs"></i> Cilësime të Avancuara</summary>
+        <div class="advanced-settings-content">
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="enableProxy">
+                    <span>Përdor Proxy për CORS</span>
+                </label>
+                <div class="form-hint">Aktivizo nëse ke probleme me lidhjen</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="customPort">Port Custom (opsionale):</label>
+                <input type="number" id="customPort" placeholder="8080">
+            </div>
+            
+            <div class="test-buttons">
+                <button class="btn btn-secondary" id="testSimpleBtn">
+                    <i class="fas fa-vial"></i> Testo API Simple
+                </button>
+                <button class="btn btn-secondary" id="testM3UBtn">
+                    <i class="fas fa-list"></i> Testo M3U
+                </button>
+            </div>
+        </div>
+    </details>
+</div>
+
+<div class="connection-test" id="connectionTest" style="display: none;">
+    <h4><i class="fas fa-network-wired"></i> Rezultatet e Testit</h4>
+    <div class="url-preview" id="testUrl"></div>
+    <div class="debug-info" id="testResult"></div>
+</div>
                     <div class="login-buttons">
                         <button class="btn btn-primary btn-block" id="connectBtn">
                             <i class="fas fa-plug"></i> Lidhu me Provider
