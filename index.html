@@ -3,143 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTV Player - Xtream Codes</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>IPTV Player - Live TV, VOD, Series</title>
+    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <i class="fas fa-tv"></i>
+            <span>IPTV Player</span>
+        </div>
+        
+        <div class="server-config">
+            <input type="text" id="server-url" placeholder="Server URL" value="http://example.com:8080">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="connect-btn"><i class="fas fa-plug"></i> Lidhu</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
     <div class="container">
-        <!-- Login Form -->
-        <div class="login-card" id="loginCard">
-            <h2><i class="fas fa-sign-in-alt"></i> Hyrje në IPTV</h2>
-            <div class="form-group">
-                <label for="serverUrl"><i class="fas fa-server"></i> Server URL</label>
-                <input type="text" id="serverUrl" placeholder="http://server-i-providerit.com" required>
-                <small class="form-help">Pa / në fund (p.sh.: http://domain.com)</small>
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <ul class="nav-menu">
+                <li class="active" data-tab="live"><i class="fas fa-broadcast-tower"></i> Live TV</li>
+                <li data-tab="vod"><i class="fas fa-film"></i> VOD</li>
+                <li data-tab="series"><i class="fas fa-tv"></i> Seri</li>
+                <li data-tab="categories"><i class="fas fa-list"></i> Kategoritë</li>
+                <li data-tab="favorites"><i class="fas fa-star"></i> Favoritet</li>
+                <li data-tab="settings"><i class="fas fa-cog"></i> Cilësime</li>
+            </ul>
+            
+            <div class="playlist-import">
+                <h4><i class="fas fa-file-import"></i> Importo M3U</h4>
+                <input type="file" id="m3u-file" accept=".m3u,.m3u8">
+                <input type="text" id="m3u-url" placeholder="OSE shkruaj URL M3U">
+                <button id="load-m3u"><i class="fas fa-upload"></i> Ngarko</button>
             </div>
-            <div class="form-group">
-                <label for="username"><i class="fas fa-user"></i> Username</label>
-                <input type="text" id="username" placeholder="Emri i përdoruesit" required>
-            </div>
-            <div class="form-group">
-                <label for="password"><i class="fas fa-lock"></i> Password</label>
-                <input type="password" id="password" placeholder="Fjalëkalimi" required>
-            </div>
-            <button class="btn login-btn" id="loginBtn">
-                <i class="fas fa-sign-in-alt"></i> Kyçu
-            </button>
-            <div class="login-info">
-                <p><i class="fas fa-info-circle"></i> Shkruani të dhënat nga provideri juaj IPTV</p>
-            </div>
-        </div>
+        </nav>
 
-        <!-- Main Player Interface (Hidden until login) -->
-        <div class="player-interface" id="playerInterface" style="display: none;">
-            <!-- Header -->
-            <div class="header">
-                <div class="channel-info">
-                    <i class="fas fa-satellite-dish"></i>
-                    <span id="currentCategory">Live TV</span>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Video Player -->
+            <div class="video-section">
+                <div class="video-wrapper">
+                    <video id="main-video" controls crossorigin="anonymous">
+                        <!-- Video source do të vendoset me JavaScript -->
+                    </video>
+                    <div class="player-controls">
+                        <button id="play-btn"><i class="fas fa-play"></i></button>
+                        <button id="pause-btn"><i class="fas fa-pause"></i></button>
+                        <input type="range" id="volume-slider" min="0" max="100" value="80">
+                        <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
+                        <span id="now-playing">Asgjë nuk po luhet</span>
+                    </div>
                 </div>
-                <div class="user-info">
-                    <span id="loggedUser"></span>
-                    <button class="btn-logout" id="logoutBtn">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
+                
+                <!-- EPG Info -->
+                <div class="epg-section">
+                    <h3><i class="fas fa-tv"></i> Programi Aktual</h3>
+                    <div id="epg-info">Duke ngarkuar...</div>
                 </div>
             </div>
 
-            <!-- Main Content -->
-            <div class="main-content">
-                <!-- Categories Sidebar -->
-                <div class="sidebar">
-                    <h3><i class="fas fa-list"></i> Kategoritë</h3>
-                    <div class="categories-list" id="categoriesList">
-                        <!-- Categories will be loaded here -->
-                        <div class="loading-categories">
-                            <i class="fas fa-spinner fa-spin"></i> Duke ngarkuar kategoritë...
-                        </div>
+            <!-- Content Lists -->
+            <div class="content-section">
+                <!-- Live TV -->
+                <div class="tab-content active" id="live-tab">
+                    <div class="section-header">
+                        <h2><i class="fas fa-broadcast-tower"></i> Live TV</h2>
+                        <select id="live-category-filter">
+                            <option value="all">Të gjitha kategoritë</option>
+                            <!-- Kategoritë do të mbushen me JavaScript -->
+                        </select>
+                    </div>
+                    <div class="channel-grid" id="live-channels">
+                        <!-- Kanalet do të mbushen me JavaScript -->
                     </div>
                 </div>
 
-                <!-- Channels and Player Area -->
-                <div class="content-area">
-                    <!-- Channels Grid -->
-                    <div class="channels-section">
-                        <div class="section-header">
-                            <h3><i class="fas fa-tv"></i> Kanalet</h3>
-                            <div class="search-box">
-                                <input type="text" id="searchChannel" placeholder="Kërko kanal...">
-                                <i class="fas fa-search"></i>
-                            </div>
-                        </div>
-                        <div class="channels-grid" id="channelsGrid">
-                            <!-- Channels will be loaded here -->
-                            <div class="loading-channels">
-                                <i class="fas fa-spinner fa-spin"></i> Zgjidhni një kategori për të parë kanalet
-                            </div>
+                <!-- VOD -->
+                <div class="tab-content" id="vod-tab">
+                    <div class="section-header">
+                        <h2><i class="fas fa-film"></i> Video on Demand</h2>
+                        <div class="search-box">
+                            <input type="text" id="vod-search" placeholder="Kërko filma...">
+                            <i class="fas fa-search"></i>
                         </div>
                     </div>
-
-                    <!-- Video Player -->
-                    <div class="player-section">
-                        <div class="player-header">
-                            <h3><i class="fas fa-play-circle"></i> Player</h3>
-                            <div class="player-status" id="playerStatus">
-                                <span class="status-ready"><i class="fas fa-check-circle"></i> Gati</span>
-                            </div>
-                        </div>
-                        <div class="video-container">
-                            <video id="videoPlayer" controls>
-                                <source src="" type="video/mpeg">
-                                Shfletuesi juaj nuk mbështet elementin video.
-                            </video>
-                            <div class="player-placeholder" id="playerPlaceholder">
-                                <i class="fas fa-play"></i>
-                                <p>Klikoni një kanal për të filluar shikimin</p>
-                            </div>
-                        </div>
-                        <div class="current-channel-info" id="currentChannelInfo">
-                            <!-- Channel info will be shown here -->
-                        </div>
-                        <div class="player-controls">
-                            <button class="btn-control" id="playPauseBtn">
-                                <i class="fas fa-play"></i> Luaj
-                            </button>
-                            <button class="btn-control" id="stopBtn">
-                                <i class="fas fa-stop"></i> Ndal
-                            </button>
-                            <button class="btn-control" id="fullscreenBtn">
-                                <i class="fas fa-expand"></i> Ekran i plotë
-                            </button>
-                            <button class="btn-control" id="refreshStreamBtn">
-                                <i class="fas fa-sync-alt"></i> Rifresko
-                            </button>
-                        </div>
+                    <div class="vod-grid" id="vod-movies">
+                        <!-- Filmat do të mbushen me JavaScript -->
                     </div>
                 </div>
-            </div>
 
-            <!-- Footer -->
-            <div class="footer">
-                <div class="server-info">
-                    <span><i class="fas fa-server"></i> Server: <span id="currentServer"></span></span>
+                <!-- Series -->
+                <div class="tab-content" id="series-tab">
+                    <div class="section-header">
+                        <h2><i class="fas fa-tv"></i> Seri TV</h2>
+                        <select id="series-category-filter">
+                            <option value="all">Të gjitha kategoritë</option>
+                        </select>
+                    </div>
+                    <div class="series-list" id="series-container">
+                        <!-- Seritë do të mbushen me JavaScript -->
+                    </div>
                 </div>
-                <div class="stats">
-                    <span><i class="fas fa-tv"></i> Kanale: <span id="totalChannels">0</span></span>
-                    <span><i class="fas fa-folder"></i> Kategori: <span id="totalCategories">0</span></span>
-                </div>
-                <div class="connection-status">
-                    <div class="status-dot" id="connectionStatus"></div>
-                    <span>Online</span>
+
+                <!-- Favorites -->
+                <div class="tab-content" id="favorites-tab">
+                    <h2><i class="fas fa-star"></i> Favoritet</h2>
+                    <div id="favorites-container"></div>
                 </div>
             </div>
-        </div>
-
-        <!-- Status Message -->
-        <div class="status-message" id="statusMessage"></div>
+        </main>
     </div>
 
-    <script src="script.js"></script>
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet">
+    
+    <!-- Our Scripts -->
+    <script src="js/m3u-parser.js"></script>
+    <script src="js/xtream-api.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
