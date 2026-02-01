@@ -10,12 +10,14 @@
     <div class="container">
         <header>
             <h1>📺 IPTV Player</h1>
-            <div class="controls">
-                <input type="file" id="m3uFile" accept=".m3u,.m3u8" hidden>
-                <button id="loadM3U">📂 Load M3U File</button>
-                <button id="loadURL">🔗 Load from URL</button>
-                <input type="text" id="m3uUrl" placeholder="Enter M3U URL">
-            </div>
+            <!-- Shto këto butona në controls div -->
+<div class="controls">
+    <input type="file" id="m3uFile" accept=".m3u,.m3u8" hidden>
+    <button id="loadM3U">📂 Load M3U File</button>
+    <button id="loadURL">🔗 Load from URL</button>
+    <button id="playDirect">🎬 Play Direct URL</button>
+    <input type="text" id="m3uUrl" placeholder="Enter M3U URL (http://...)">
+</div>
         </header>
 
         <div class="main">
