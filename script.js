@@ -1,538 +1,546 @@
 class IPTVPlayer {
     constructor() {
-        this.channels = [];
         this.currentChannel = null;
-        this.hls = null;
-        this.isHlsSupported = false;
-        
-        // KONFIGURIME STRINGTE PËR TË NDALUAR AUTO-SWITCHING
-        this.autoSwitchEnabled = false; // FIKUR DEFAULT
-        this.isSwitching = false;
-        this.currentChannelIndex = -1;
-        this.playbackAttempts = 0;
-        this.maxPlaybackAttempts = 1; // VETËM 1 PROVIM
-        this.errorTimeout = null;
-        this.retryTimeout = null;
-        
-        // Kontroll për HLS.js
-        this.hlsErrorCount = 0;
-        this.maxHlsErrors = 2;
-        
-        // Flag për të parandaluar çdo auto-switch
-        this.blockAllAutoSwitches = true;
-        
-        this.init();
-    }
-    
-    async init() {
-        this.setupElements();
-        this.setupEventListeners();
-        this.setupHLS();
-        
-        // Fik butonin auto-switch që nga fillimi
-        const autoSwitchToggle = document.getElementById('autoSwitchToggle');
-        if (autoSwitchToggle) {
-            autoSwitchToggle.checked = false;
-            this.autoSwitchEnabled = false;
-        }
-        
-        this.showMessage('IPTV Player u inicializua. Auto-switch është FIKUR.', 'info');
-        
-        console.log('IPTV Player initialized - AUTO-SWITCH DISABLED');
-    }
-    
-    setupElements() {
-        // Elementet bazë
-        this.elements = {
-            videoPlayer: document.getElementById('videoPlayer'),
-            channelList: document.getElementById('channelList'),
-            currentChannel: document.getElementById('currentChannel'),
-            status: document.getElementById('status'),
-            playerState: document.getElementById('playerState'),
-            channelsLoaded: document.getElementById('channelsLoaded'),
-            channelCount: document.getElementById('channelCount'),
-            streamStatus: document.getElementById('streamStatus'),
-            bufferIndicator: document.getElementById('bufferIndicator'),
-            playerOverlay: document.getElementById('playerOverlay'),
-            overlayText: document.getElementById('overlayText'),
-            overlayIcon: document.getElementById('overlayIcon')
+        this.hlsInstance = null;
+        this.channels = [];
+        this.categories = [];
+        this.epgData = {};
+        this.history = JSON.parse(localStorage.getItem('iptv_history')) || [];
+        this.settings = JSON.parse(localStorage.getItem('iptv_settings')) || {
+            autoPlay: true,
+            bufferSize: 50,
+            quality: 'auto'
         };
         
-        // Krijo loading overlay
-        this.createLoadingOverlay();
-        this.createErrorOverlay();
-        this.createStrictModeControls();
+        this.initializeElements();
+        this.setupEventListeners();
+        this.loadSettings();
+        this.updateTime();
+        setInterval(() => this.updateTime(), 60000);
     }
     
-    createStrictModeControls() {
-        // Shto kontrolle strikte për të parandaluar auto-switch
-        const playerInfo = document.querySelector('.player-info');
-        if (!playerInfo) return;
+    initializeElements() {
+        // Player elements
+        this.player = document.getElementById('player');
+        this.channelName = document.getElementById('channel-name');
+        this.epgInfo = document.getElementById('epg-info');
+        this.volumeBtn = document.getElementById('volume-btn');
+        this.volumeSlider = document.getElementById('volume-slider');
+        this.volumeValue = document.getElementById('volume-value');
+        this.volumePopup = document.getElementById('volume-popup');
+        this.fullscreenBtn = document.getElementById('fullscreen-btn');
         
-        const strictControls = document.createElement('div');
-        strictControls.className = 'strict-controls';
-        strictControls.innerHTML = `
-            <div class="strict-header">
-                <h4>🔒 Strict Playback Controls</h4>
-                <span class="strict-status" id="strictStatus">ACTIVE</span>
-            </div>
-            <div class="strict-options">
-                <div class="strict-option">
-                    <label class="strict-switch">
-                        <input type="checkbox" id="strictModeToggle" checked disabled>
-                        <span class="strict-slider"></span>
-                        <span class="strict-label">STRICT MODE (No Auto-switch)</span>
-                    </label>
-                </div>
-                <div class="strict-buttons">
-                    <button id="forceStopSwitch" class="btn-danger">
-                        ⏹️ Force Stop Auto-Switch
-                    </button>
-                    <button id="lockChannel" class="btn-success">
-                        🔒 Lock Current Channel
-                    </button>
-                    <button id="disableHlsRecovery" class="btn-warning">
-                        🚫 Disable HLS Recovery
-                    </button>
-                </div>
-                <div class="protection-status">
-                    <div class="protection-item">
-                        <span class="protection-label">Auto-Switch:</span>
-                        <span class="protection-value blocked">BLOCKED</span>
-                    </div>
-                    <div class="protection-item">
-                        <span class="protection-label">HLS Recovery:</span>
-                        <span class="protection-value blocked" id="hlsRecoveryStatus">BLOCKED</span>
-                    </div>
-                    <div class="protection-item">
-                        <span class="protection-label">Channel Lock:</span>
-                        <span class="protection-value" id="channelLockStatus">OFF</span>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Login elements
+        this.serverInput = document.getElementById('server');
+        this.usernameInput = document.getElementById('username');
+        this.passwordInput = document.getElementById('password');
+        this.connectBtn = document.getElementById('connect-btn');
         
-        playerInfo.appendChild(strictControls);
+        // Navigation elements
+        this.navBtns = document.querySelectorAll('.nav-btn');
+        this.sections = {
+            'login-section': document.getElementById('login-section'),
+            'channels-section': document.getElementById('channels-section'),
+            'epg-section': document.getElementById('epg-section')
+        };
+        
+        // Channels elements
+        this.searchInput = document.getElementById('search-channel');
+        this.categoriesDiv = document.getElementById('categories');
+        this.channelsList = document.getElementById('channels-list');
+        
+        // EPG elements
+        this.epgContainer = document.getElementById('epg-container');
+        
+        // Settings elements
+        this.settingsModal = document.getElementById('settings-modal');
+        this.settingsBtn = document.getElementById('settings-btn');
+        this.closeSettingsBtn = document.getElementById('close-settings');
+        this.saveSettingsBtn = document.getElementById('save-settings');
+        this.autoPlayCheckbox = document.getElementById('auto-play');
+        this.bufferSizeSlider = document.getElementById('buffer-size');
+        this.bufferValue = document.getElementById('buffer-value');
+        this.qualitySelect = document.getElementById('quality');
+        
+        // Loading
+        this.loading = document.getElementById('loading');
+        
+        // Status
+        this.status = document.querySelector('.status');
     }
     
     setupEventListeners() {
-        // File loading
-        document.getElementById('loadM3U').addEventListener('click', () => {
-            document.getElementById('m3uFile').click();
-        });
-        
-        document.getElementById('m3uFile').addEventListener('change', (e) => {
-            this.handleFileUpload(e.target.files[0]);
-        });
-        
-        document.getElementById('loadURL').addEventListener('click', () => {
-            this.loadFromURL();
-        });
-        
-        // Sample data
-        document.getElementById('loadSample').addEventListener('click', () => {
-            this.loadSampleData();
-        });
-        
-        // Direct play
-        document.getElementById('playDirect').addEventListener('click', () => {
-            this.playDirectStream();
-        });
-        
-        // STRICT CONTROLS
-        this.setupStrictControlListeners();
-        
-        // Video events - KONFIGURIME STRIKTE
-        this.setupStrictVideoEvents();
-    }
-    
-    setupStrictControlListeners() {
-        // Force Stop Auto-Switch
-        document.getElementById('forceStopSwitch').addEventListener('click', () => {
-            this.blockAllAutoSwitches = true;
-            this.autoSwitchEnabled = false;
-            this.showMessage('FORCE STOP: All auto-switching disabled', 'warning');
-            this.updateProtectionStatus();
-        });
-        
-        // Lock Channel
-        document.getElementById('lockChannel').addEventListener('click', () => {
-            this.lockCurrentChannel();
-        });
-        
-        // Disable HLS Recovery
-        document.getElementById('disableHlsRecovery').addEventListener('click', () => {
-            this.disableHlsRecovery();
-        });
-        
-        // Auto-switch toggle - GJITHMONË FIKUR
-        const autoSwitchToggle = document.getElementById('autoSwitchToggle');
-        if (autoSwitchToggle) {
-            autoSwitchToggle.checked = false;
-            autoSwitchToggle.disabled = true; // Bëje të pa-editueshme
-            autoSwitchToggle.addEventListener('change', (e) => {
-                // Mos lejo ndryshim
-                e.target.checked = false;
-                this.autoSwitchEnabled = false;
-                this.showMessage('Auto-switch is PERMANENTLY DISABLED in strict mode', 'error');
-            });
-        }
-    }
-    
-    setupStrictVideoEvents() {
-        const video = this.elements.videoPlayer;
-        
-        // FSHI çdo event listener ekzistues për të parandaluar konflikte
-        video.replaceWith(video.cloneNode(true));
-        this.elements.videoPlayer = document.getElementById('videoPlayer');
-        
-        const newVideo = this.elements.videoPlayer;
-        
-        // VETËM eventet bazë, JO asnjë auto-recovery
-        newVideo.addEventListener('playing', () => {
-            this.elements.playerState.textContent = 'Playing';
-            this.elements.streamStatus.textContent = 'Playing';
-            this.elements.bufferIndicator.style.display = 'none';
-            this.hlsErrorCount = 0; // Reset error count kur fillon të luajë
-            console.log('PLAYING - No auto-switch allowed');
-        });
-        
-        newVideo.addEventListener('pause', () => {
-            this.elements.playerState.textContent = 'Paused';
-            this.elements.streamStatus.textContent = 'Paused';
-        });
-        
-        newVideo.addEventListener('waiting', () => {
-            this.elements.playerState.textContent = 'Buffering';
-            this.elements.streamStatus.textContent = 'Buffering...';
-            this.elements.bufferIndicator.style.display = 'block';
+        // Player controls
+        this.volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            this.player.volume = volume / 100;
+            this.volumeValue.textContent = `${volume}%`;
             
-            // MOS bëj asgjë automatikisht - vetëm prit
-            console.log('BUFFERING - Waiting for user action');
+            // Show volume popup
+            this.volumePopup.style.display = 'block';
+            setTimeout(() => {
+                this.volumePopup.style.display = 'none';
+            }, 1000);
         });
         
-        // ERROR HANDLING STRIKT - MOS bëj asgjë automatikisht
-        newVideo.addEventListener('error', (e) => {
-            console.error('Video error (STRICT MODE):', e);
-            this.elements.playerState.textContent = 'Error';
-            this.elements.streamStatus.textContent = 'Playback Error';
-            
-            // SHFAQ MESAZH POR MOS BËJ ASNJË AUTO-SWITCH
-            this.showStrictError();
-            
-            // MOS fillo asnjë timeout për auto-switch
-            // MOS provo të rikthehesh automatikisht
-            // MOS ndërro kanal automatikisht
-        });
-        
-        newVideo.addEventListener('loadeddata', () => {
-            this.elements.playerState.textContent = 'Loaded';
-        });
-        
-        // MOS shto event listener për 'ended' - mos lejo auto-switch
-        // MOS shto buffer monitoring automatik
-    }
-    
-    setupHLS() {
-        if (window.Hls) {
-            this.isHlsSupported = Hls.isSupported();
-            console.log('HLS.js supported:', this.isHlsSupported);
-            
-            // Override Hls default behaviors për të parandaluar auto-recovery
-            this.patchHlsBehavior();
-        }
-    }
-    
-    patchHlsBehavior() {
-        // Ruaj konstruktorin origjinal të Hls
-        const OriginalHls = window.Hls;
-        
-        // Override konstruktorin për të ndryshuar default config
-        window.Hls = class StrictHls extends OriginalHls {
-            constructor(config = {}) {
-                // Konfigurim STRIKT që parandalon çdo auto-recovery
-                const strictConfig = {
-                    ...config,
-                    // DISABLE ALL AUTO-RECOVERY FEATURES
-                    enableWorker: false, // Worker shkakton probleme
-                    lowLatencyMode: false,
-                    backBufferLength: 0,
-                    
-                    // ZERO RETRIES - MOS PROVO AUTOMATIKISHT
-                    manifestLoadingMaxRetry: 0,
-                    manifestLoadingRetryDelay: 0,
-                    manifestLoadingMaxRetryTimeout: 0,
-                    
-                    levelLoadingMaxRetry: 0,
-                    levelLoadingRetryDelay: 0,
-                    levelLoadingMaxRetryTimeout: 0,
-                    
-                    fragLoadingMaxRetry: 0,
-                    fragLoadingRetryDelay: 0,
-                    fragLoadingMaxRetryTimeout: 0,
-                    
-                    // DISABLE AUTO-QUALITY SWITCHING
-                    autoLevelEnabled: false,
-                    capLevelToPlayerSize: false,
-                    capLevelOnFPSDrop: false,
-                    
-                    // DISABLE OTHER AUTO-FEATURES
-                    testBandwidth: false,
-                    abrEwmaDefaultEstimate: 0,
-                    abrEwmaSlowLive: 0,
-                    abrEwmaFastLive: 0,
-                    abrEwmaDefaultLive: 0,
-                    abrEwmaSlowVoD: 0,
-                    abrEwmaFastVoD: 0,
-                    abrEwmaDefaultVoD: 0,
-                    
-                    // MAX BUFFER VERY SMALL
-                    maxMaxBufferLength: 1,
-                    maxBufferSize: 1000,
-                    
-                    // DISABLE LIVE SYNC
-                    liveSyncDurationCount: 0,
-                    liveMaxLatencyDurationCount: 0,
-                    liveSyncDuration: 0
-                };
-                
-                super(strictConfig);
-                
-                // Override event handlers për të parandaluar auto-recovery
-                this.on(this.Events.ERROR, (event, data) => {
-                    console.log('HLS ERROR (STRICT MODE - NO AUTO-RECOVERY):', data);
-                    
-                    // MOS bëj asnjë auto-recovery
-                    // MOS thirr startLoad()
-                    // MOS thirr recoverMediaError()
-                    // MOS bëj asgjë automatikisht
-                    
-                    // Vetëm log dhe stop
-                    if (data.fatal) {
-                        console.log('FATAL HLS ERROR - STOPPING PLAYBACK');
-                        this.destroy();
-                    }
-                });
+        this.volumeBtn.addEventListener('click', () => {
+            if (this.player.volume > 0) {
+                this.player.volume = 0;
+                this.volumeSlider.value = 0;
+                this.volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            } else {
+                this.player.volume = 0.5;
+                this.volumeSlider.value = 50;
+                this.volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
             }
-        };
+        });
         
-        // Ruaj reference
-        window.Hls = Object.assign(window.Hls, OriginalHls);
+        this.fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                this.fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+            } else {
+                document.exitFullscreen();
+                this.fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+            }
+        });
+        
+        // Navigation
+        this.navBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.target;
+                this.switchSection(target);
+                
+                // Update active state
+                this.navBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+        
+        // Connect button
+        this.connectBtn.addEventListener('click', () => this.connectToServer());
+        
+        // Search input
+        this.searchInput.addEventListener('input', (e) => {
+            this.filterChannels(e.target.value);
+        });
+        
+        // Settings
+        this.settingsBtn.addEventListener('click', () => {
+            this.settingsModal.style.display = 'flex';
+        });
+        
+        this.closeSettingsBtn.addEventListener('click', () => {
+            this.settingsModal.style.display = 'none';
+        });
+        
+        this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+        
+        this.bufferSizeSlider.addEventListener('input', (e) => {
+            this.bufferValue.textContent = `${e.target.value}MB`;
+        });
+        
+        // Keyboard shortcuts for Smart TV remote
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.navigateChannels(-1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.navigateChannels(1);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.player.currentTime -= 10;
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.player.currentTime += 10;
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (this.currentChannel) {
+                        this.play(this.currentChannel);
+                    }
+                    break;
+                case 'Backspace':
+                case 'Escape':
+                    e.preventDefault();
+                    if (this.settingsModal.style.display === 'flex') {
+                        this.settingsModal.style.display = 'none';
+                    }
+                    break;
+            }
+        });
     }
     
-    async playChannel(channel, index) {
-        if (this.isSwitching) {
-            console.log('Already switching, please wait...');
+    async connectToServer() {
+        const server = this.serverInput.value.trim();
+        const username = this.usernameInput.value.trim();
+        const password = this.passwordInput.value.trim();
+        
+        if (!server || !username || !password) {
+            alert('Ju lutem plotësoni të gjitha fushat!');
             return;
         }
         
-        this.isSwitching = true;
-        this.showLoading(`Loading ${channel.name}...`);
+        this.showLoading();
+        this.status.textContent = 'Duke lidhur...';
+        this.status.style.background = '#f39c12';
         
         try {
-            // Stop any existing playback COMPLETELY
-            await this.stopAllPlayback();
+            // Në rastin real, kjo do të ishte një thirrje në serverin tuaj IPTV
+            // Për demonstrim, do të përdorim të dhëna testimi
+            await this.fetchChannels(server, username, password);
             
-            // Update UI
-            this.setActiveChannel(index);
-            this.updateChannelInfo(channel);
-            this.currentChannelIndex = index;
-            this.currentChannel = channel;
-            this.playbackAttempts = 0;
+            this.status.textContent = 'I lidhur';
+            this.status.style.background = '#2ecc71';
             
-            // Play new stream with STRICT settings
-            await this.playStreamStrict(channel.url);
-            
-            this.showMessage(`Playing: ${channel.name}`, 'success');
+            this.switchSection('channels-section');
+            document.querySelector('[data-target="channels-section"]').classList.add('active');
             
         } catch (error) {
-            console.error('Play channel error:', error);
-            
-            // MOS PROVO AUTO-SWITCH KURRË
-            this.showStrictError(`Failed to play: ${error.message}. Click another channel manually.`);
-            
+            console.error('Error connecting:', error);
+            this.status.textContent = 'Gabim në lidhje';
+            this.status.style.background = '#e74c3c';
+            alert('Nuk mund të lidhemi me serverin. Kontrolloni konfigurimin.');
         } finally {
-            this.isSwitching = false;
             this.hideLoading();
         }
     }
     
-    async stopAllPlayback() {
-        const video = this.elements.videoPlayer;
+    async fetchChannels(server, username, password) {
+        // Kjo është një simulim - në realitet do të merrnit të dhëna nga serveri IPTV
+        // Për demonstrim, po krijoj kanale testimi
         
-        // Pause and reset
-        video.pause();
-        video.src = '';
-        video.load();
+        this.categories = ['Të gjitha', 'Lajme', 'Sport', 'Filma', 'Muzikë', 'Fëmijë', 'Dokumentar'];
+        this.channels = [];
         
-        // Destroy HLS instance COMPLETELY
-        if (this.hls) {
-            // Force destroy without any cleanup that might trigger events
-            try {
-                this.hls.destroy();
-                this.hls = null;
-            } catch (e) {
-                console.log('Force HLS destroy');
-            }
+        // Krijo kanale testimi
+        const channelNames = [
+            'TVSH', 'RTSH 1', 'RTSH 2', 'Top Channel', 'Klan TV', 'Vizion Plus',
+            'ABC News', 'Telesport', 'Film Hits', 'Music Channel', 'Kidz TV', 'Nat Geo'
+        ];
+        
+        const categoryMap = {
+            0: 'Lajme', 1: 'Lajme', 2: 'Lajme', 3: 'Të gjitha', 4: 'Të gjitha',
+            5: 'Të gjitha', 6: 'Lajme', 7: 'Sport', 8: 'Filma', 9: 'Muzikë',
+            10: 'Fëmijë', 11: 'Dokumentar'
+        };
+        
+        for (let i = 0; i < channelNames.length; i++) {
+            this.channels.push({
+                id: i + 1,
+                name: channelNames[i],
+                number: i + 101,
+                category: categoryMap[i],
+                stream_id: i + 1000,
+                logo: `https://via.placeholder.com/40x40/4cc9f0/ffffff?text=${channelNames[i].charAt(0)}`
+            });
         }
         
-        // Clear ALL timeouts and intervals
-        this.clearAllTimeouts();
-        
-        // Force garbage collection
-        video.removeAttribute('src');
-        video.load();
-        
-        await new Promise(resolve => setTimeout(resolve, 200));
-    }
-    
-    clearAllTimeouts() {
-        if (this.errorTimeout) clearTimeout(this.errorTimeout);
-        if (this.retryTimeout) clearTimeout(this.retryTimeout);
-        this.errorTimeout = null;
-        this.retryTimeout = null;
-        
-        // Clear any other potential intervals
-        const highestId = window.setTimeout(() => {}, 0);
-        for (let i = 0; i < highestId; i++) {
-            window.clearTimeout(i);
-            window.clearInterval(i);
-        }
-    }
-    
-    async playStreamStrict(url) {
-        return new Promise((resolve, reject) => {
-            const video = this.elements.videoPlayer;
-            
-            // Reset video completely
-            video.src = '';
-            video.load();
-            
-            // Setup ONE-TIME event listeners
-            const onCanPlay = () => {
-                cleanup();
-                video.play().then(resolve).catch(reject);
-            };
-            
-            const onError = (e) => {
-                cleanup();
-                reject(new Error(`Playback failed: ${video.error?.message || 'Unknown error'}`));
-            };
-            
-            const cleanup = () => {
-                video.removeEventListener('canplay', onCanPlay);
-                video.removeEventListener('error', onError);
-            };
-            
-            video.addEventListener('canplay', onCanPlay, { once: true });
-            video.addEventListener('error', onError, { once: true });
-            
-            // Set source and load
-            video.src = url;
-            video.load();
-            
-            // Timeout për të mos pritur pafundësisht
-            setTimeout(() => {
-                if (video.readyState < 2) { // Nuk ka filluar të ngarkohet
-                    cleanup();
-                    reject(new Error('Playback timeout'));
+        // Krijo EPG testimi
+        this.epgData = {};
+        this.channels.forEach(channel => {
+            this.epgData[channel.id] = [
+                {
+                    title: `Programi kryesor - ${channel.name}`,
+                    start: '19:00',
+                    end: '20:30',
+                    description: 'Programi kryesor i ditës'
+                },
+                {
+                    title: 'Lajmet e mbrëmjes',
+                    start: '20:30',
+                    end: '21:00',
+                    description: 'Përmbledhje e lajmeve të ditës'
+                },
+                {
+                    title: 'Filma/Seria',
+                    start: '21:00',
+                    end: '22:30',
+                    description: 'Filma ose seri televizive'
                 }
-            }, 10000);
+            ];
+        });
+        
+        this.renderCategories();
+        this.renderChannels();
+    }
+    
+    renderCategories() {
+        this.categoriesDiv.innerHTML = '';
+        this.categories.forEach(category => {
+            const button = document.createElement('button');
+            button.className = 'category-btn';
+            button.textContent = category;
+            button.dataset.category = category;
+            button.addEventListener('click', () => this.filterByCategory(category));
+            this.categoriesDiv.appendChild(button);
+        });
+        
+        // Aktivizo kategorinë e parë
+        if (this.categories.length > 0) {
+            this.categoriesDiv.firstChild.classList.add('active');
+        }
+    }
+    
+    renderChannels(filteredChannels = this.channels) {
+        this.channelsList.innerHTML = '';
+        
+        filteredChannels.forEach(channel => {
+            const channelItem = document.createElement('div');
+            channelItem.className = 'channel-item';
+            channelItem.dataset.id = channel.id;
+            
+            channelItem.innerHTML = `
+                <img src="${channel.logo}" alt="${channel.name}" class="channel-logo" onerror="this.src='https://via.placeholder.com/40x40/333/fff?text=TV'">
+                <div class="channel-name">${channel.name}</div>
+                <div class="channel-number">${channel.number}</div>
+                <div class="now-playing">Live</div>
+            `;
+            
+            channelItem.addEventListener('click', () => this.play(channel));
+            this.channelsList.appendChild(channelItem);
         });
     }
     
-    showStrictError(message = 'Playback error. Channel will NOT switch automatically.') {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'strict-error';
-        errorDiv.innerHTML = `
-            <div class="strict-error-header">
-                <span class="strict-error-icon">🚫</span>
-                <strong>STRICT MODE ERROR</strong>
-            </div>
-            <div class="strict-error-body">
-                ${message}
-            </div>
-            <div class="strict-error-actions">
-                <button onclick="iptvPlayer.retryCurrentChannelStrict()" class="btn-warning">
-                    🔄 Manual Retry
-                </button>
-                <button onclick="this.parentElement.parentElement.remove()" class="btn-small">
-                    Close
-                </button>
-            </div>
-        `;
+    filterByCategory(category) {
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
         
-        // Fshi çdo error ekzistues
-        document.querySelectorAll('.strict-error').forEach(el => el.remove());
-        
-        document.querySelector('.player-section').appendChild(errorDiv);
-        
-        // Auto-remove pas 10 sekondash
-        setTimeout(() => {
-            if (errorDiv.parentNode) {
-                errorDiv.remove();
-            }
-        }, 10000);
-    }
-    
-    retryCurrentChannelStrict() {
-        if (this.currentChannel && this.currentChannelIndex >= 0) {
-            this.playChannel(this.currentChannel, this.currentChannelIndex);
+        if (category === 'Të gjitha') {
+            this.renderChannels();
+        } else {
+            const filtered = this.channels.filter(ch => ch.category === category);
+            this.renderChannels(filtered);
         }
     }
     
-    lockCurrentChannel() {
-        // Blloko çdo ndryshim kanali
-        const lockStatus = document.getElementById('channelLockStatus');
-        if (lockStatus.textContent === 'OFF') {
-            lockStatus.textContent = 'ON';
-            lockStatus.className = 'protection-value active';
+    filterChannels(searchTerm) {
+        const filtered = this.channels.filter(channel =>
+            channel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            channel.number.toString().includes(searchTerm)
+        );
+        this.renderChannels(filtered);
+    }
+    
+    navigateChannels(direction) {
+        const currentIndex = this.channels.findIndex(ch => ch.id === this.currentChannel?.id);
+        if (currentIndex === -1) return;
+        
+        let newIndex = currentIndex + direction;
+        if (newIndex < 0) newIndex = this.channels.length - 1;
+        if (newIndex >= this.channels.length) newIndex = 0;
+        
+        const nextChannel = this.channels[newIndex];
+        this.play(nextChannel);
+    }
+    
+    play(channel) {
+        if (!channel) return;
+        
+        this.currentChannel = channel;
+        this.channelName.textContent = channel.name;
+        
+        // Ndrysho kanalin aktiv në listë
+        document.querySelectorAll('.channel-item').forEach(item => {
+            item.classList.remove('active');
+            if (parseInt(item.dataset.id) === channel.id) {
+                item.classList.add('active');
+                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+        
+        // Shto në historik
+        this.addToHistory(channel);
+        
+        // Shfaq EPG për kanalin aktual
+        this.showEPG(channel.id);
+        
+        // Start video
+        this.startVideo(channel);
+    }
+    
+    startVideo(channel) {
+        // Për demonstrim, përdorim një stream testimi
+        // Në rastin real, do të përdorni URL-në nga serveri juaj
+        const testStreams = [
+            'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+            'https://test-streams.mux.dev/test_001/stream.m3u8',
+            'https://content.jwplatform.com/manifests/vM7nH0Kl.m3u8'
+        ];
+        
+        const streamUrl = testStreams[channel.id % testStreams.length];
+        
+        if (this.hlsInstance) {
+            this.hlsInstance.destroy();
+            this.hlsInstance = null;
+        }
+        
+        if (Hls.isSupported()) {
+            this.hlsInstance = new Hls({
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: this.settings.bufferSize,
+                manifestLoadingTimeOut: 10000,
+                manifestLoadingMaxRetry: 3,
+                levelLoadingTimeOut: 10000,
+                levelLoadingMaxRetry: 3,
+                fragLoadingTimeOut: 10000,
+                fragLoadingMaxRetry: 3
+            });
             
-            // Blloko klikimet në kanalet e tjera
-            document.querySelectorAll('.channel-item').forEach(item => {
-                if (!item.classList.contains('active')) {
-                    item.style.opacity = '0.5';
-                    item.style.pointerEvents = 'none';
+            this.hlsInstance.loadSource(streamUrl);
+            this.hlsInstance.attachMedia(this.player);
+            
+            this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                if (this.settings.autoPlay) {
+                    this.player.play().catch(e => console.log('Auto-play prevented:', e));
                 }
             });
             
-            this.showMessage('Channel LOCKED - Other channels disabled', 'warning');
-        } else {
-            lockStatus.textContent = 'OFF';
-            lockStatus.className = 'protection-value';
-            
-            // Zgjidh bllokimin
-            document.querySelectorAll('.channel-item').forEach(item => {
-                item.style.opacity = '1';
-                item.style.pointerEvents = 'auto';
+            this.hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                console.error('HLS error:', data);
+                if (data.fatal) {
+                    switch(data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.log('Network error, trying to recover...');
+                            this.hlsInstance.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.log('Media error, trying to recover...');
+                            this.hlsInstance.recoverMediaError();
+                            break;
+                        default:
+                            console.log('Fatal error, destroying HLS instance');
+                            this.hlsInstance.destroy();
+                            break;
+                    }
+                }
             });
-            
-            this.showMessage('Channel UNLOCKED', 'info');
+        } else if (this.player.canPlayType('application/vnd.apple.mpegurl')) {
+            this.player.src = streamUrl;
+            if (this.settings.autoPlay) {
+                this.player.play().catch(e => console.log('Auto-play prevented:', e));
+            }
         }
     }
     
-    disableHlsRecovery() {
-        const recoveryStatus = document.getElementById('hlsRecoveryStatus');
-        recoveryStatus.textContent = 'DISABLED';
-        recoveryStatus.className = 'protection-value disabled';
+    addToHistory(channel) {
+        const historyItem = {
+            id: channel.id,
+            name: channel.name,
+            timestamp: new Date().toISOString()
+        };
         
-        // Çaktivizo plotësisht HLS.js
-        this.isHlsSupported = false;
-        window.Hls = null;
+        // Hiq nëse ekziston
+        this.history = this.history.filter(item => item.id !== channel.id);
         
-        this.showMessage('HLS.js COMPLETELY DISABLED - Using native playback only', 'warning');
+        // Shto në fillim
+        this.history.unshift(historyItem);
+        
+        // Mbaj vetëm 20 të fundit
+        this.history = this.history.slice(0, 20);
+        
+        localStorage.setItem('iptv_history', JSON.stringify(this.history));
     }
     
-    updateProtectionStatus() {
-        const strictStatus = document.getElementById('strictStatus');
-        strictStatus.textContent = this.blockAllAutoSwitches ? 'ACTIVE' : 'INACTIVE';
-        strictStatus.className = this.blockAllAutoSwitches ? 'active' : '';
+    showEPG(channelId) {
+        const epg = this.epgData[channelId] || [];
+        this.epgContainer.innerHTML = '';
+        
+        if (epg.length === 0) {
+            this.epgContainer.innerHTML = '<p class="no-epg">Nuk ka informacion EPG për këtë kanal</p>';
+            this.epgInfo.textContent = 'Nuk ka informacion EPG';
+            return;
+        }
+        
+        epg.forEach(program => {
+            const epgItem = document.createElement('div');
+            epgItem.className = 'epg-item';
+            epgItem.innerHTML = `
+                <div class="epg-time">${program.start} - ${program.end}</div>
+                <div class="epg-title">${program.title}</div>
+                <div class="epg-desc">${program.description}</div>
+            `;
+            this.epgContainer.appendChild(epgItem);
+        });
+        
+        // Shfaq programin aktual në player overlay
+        const now = new Date();
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const currentProgram = epg.find(p => currentTime >= p.start && currentTime <= p.end);
+        
+        if (currentProgram) {
+            this.epgInfo.textContent = `${currentProgram.title} (${currentProgram.start}-${currentProgram.end})`;
+        } else {
+            this.epgInfo.textContent = 'Nuk ka program të drejtpërdrejtë';
+        }
     }
     
-    // ... (metodat e tjera mbeten të njëjta)
+    switchSection(sectionId) {
+        // Fshi të gjitha seksionet
+        Object.values(this.sections).forEach(section => {
+            if (section) section.style.display = 'none';
+        });
+        
+        // Shfaq seksionin e zgjedhur
+        if (this.sections[sectionId]) {
+            this.sections[sectionId].style.display = 'block';
+        }
+    }
+    
+    loadSettings() {
+        this.autoPlayCheckbox.checked = this.settings.autoPlay;
+        this.bufferSizeSlider.value = this.settings.bufferSize;
+        this.bufferValue.textContent = `${this.settings.bufferSize}MB`;
+        this.qualitySelect.value = this.settings.quality;
+    }
+    
+    saveSettings() {
+        this.settings = {
+            autoPlay: this.autoPlayCheckbox.checked,
+            bufferSize: parseInt(this.bufferSizeSlider.value),
+            quality: this.qualitySelect.value
+        };
+        
+        localStorage.setItem('iptv_settings', JSON.stringify(this.settings));
+        this.settingsModal.style.display = 'none';
+        alert('Cilësimet u ruajtën me sukses!');
+    }
+    
+    showLoading() {
+        this.loading.style.display = 'flex';
+    }
+    
+    hideLoading() {
+        this.loading.style.display = 'none';
+    }
+    
+    updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('sq-AL', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const dateString = now.toLocaleDateString('sq-AL', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        document.getElementById('current-time').textContent = 
+            `${dateString} | ${timeString}`;
+    }
 }
 
-// Initialize kur faqja ngarkohet
+// Initialize player when page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.iptvPlayer = new IPTVPlayer();
 });
