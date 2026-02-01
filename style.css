@@ -316,3 +316,108 @@ video {
     font-size: 1.2em;
     margin-bottom: 10px;
 }
+
+/* Debug and error styles */
+.error-display {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 400px;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: none;
+}
+
+.error-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.error-icon {
+    font-size: 20px;
+}
+
+.error-text {
+    flex: 1;
+    font-size: 14px;
+}
+
+.error-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+/* Test button in channel list */
+.test-btn {
+    background: rgba(0, 180, 216, 0.3);
+    border: 1px solid #00b4d8;
+    color: white;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    display: none;
+}
+
+.channel-item:hover .test-btn {
+    display: block;
+}
+
+.channel-item .channel-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.channel-details {
+    flex: 1;
+    overflow: hidden;
+}
+
+.channel-url {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.group-count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+/* Loading details */
+#loadingDetails {
+    margin-top: 10px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Stream info panel */
+.stream-info {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.stream-url {
+    word-break: break-all;
+    font-family: monospace;
+    color: #00b4d8;
+}
