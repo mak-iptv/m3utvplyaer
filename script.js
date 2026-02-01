@@ -1,35 +1,18 @@
 class IptvPlayerPro {
     constructor() {
         this.channels = [];
-        this.categories = [];
         this.currentChannel = null;
-        this.currentCategory = 'all';
         this.hls = null;
         this.startTime = Date.now();
 
-        this.settings = {
-            autoPlay: true,
-            rememberVolume: true
-        };
-
-        this.init();
+        this.cache();
+        this.bind();
+        this.initClock();
     }
 
-    init() {
-        this.cacheElements();
-        this.bindEvents();
+    /* ================= INIT ================= */
 
-        // autoplay compatibility
-        this.video.muted = true;
-        this.video.playsInline = true;
-
-        this.loadVolume();
-        this.updateClock();
-        setInterval(() => this.updateClock(), 1000);
-        setInterval(() => this.updateUptime(), 1000);
-    }
-
-    cacheElements() {
+    cache() {
         this.video = document.getElementById('mainVideo');
         this.loading = document.getElementById('loadingSpinner');
         this.error = document.getElementById('errorMessage');
@@ -38,94 +21,77 @@ class IptvPlayerPro {
         this.prevBtn = document.getElementById('prevChannelBtn');
         this.nextBtn = document.getElementById('nextChannelBtn');
         this.volumeSlider = document.getElementById('volumeSliderOverlay');
-        this.muteBtn = document.getElementById('muteBtn');
 
         this.channelName = document.getElementById('channelNameOverlay');
-        this.currentTimeEl = document.getElementById('currentTime');
-        this.uptimeEl = document.getElementById('uptime');
-
         this.channelsGrid = document.getElementById('channelsGrid');
+        this.uptimeEl = document.getElementById('uptime');
+        this.timeEl = document.getElementById('currentTime');
+
+        this.video.muted = true;
+        this.video.playsInline = true;
     }
 
-    bindEvents() {
-        this.playPauseBtn.onclick = () => this.togglePlay();
-        this.prevBtn.onclick = () => this.prevChannel();
-        this.nextBtn.onclick = () => this.nextChannel();
-        this.muteBtn.onclick = () => this.toggleMute();
+    bind() {
+        if (this.playPauseBtn)
+            this.playPauseBtn.onclick = () => this.togglePlay();
 
-        this.volumeSlider.oninput = e => {
-            this.video.volume = e.target.value / 100;
-            localStorage.setItem('volume', this.video.volume);
-        };
+        if (this.prevBtn)
+            this.prevBtn.onclick = () => this.prevChannel();
 
-        // Smart TV / Remote / Keyboard
+        if (this.nextBtn)
+            this.nextBtn.onclick = () => this.nextChannel();
+
+        if (this.volumeSlider)
+            this.volumeSlider.oninput = e => {
+                this.video.volume = e.target.value / 100;
+            };
+
         document.addEventListener('keydown', e => {
-            const k = e.key || e.keyCode;
-            if (k === 'Enter' || k === 13) this.togglePlay();
-            if (k === 'ArrowLeft' || k === 37) this.prevChannel();
-            if (k === 'ArrowRight' || k === 39) this.nextChannel();
-            if (k === 'ArrowUp' || k === 38) this.changeVolume(10);
-            if (k === 'ArrowDown' || k === 40) this.changeVolume(-10);
+            if (e.key === 'Enter') this.togglePlay();
+            if (e.key === 'ArrowLeft') this.prevChannel();
+            if (e.key === 'ArrowRight') this.nextChannel();
         });
+    }
+
+    initClock() {
+        setInterval(() => {
+            if (this.timeEl)
+                this.timeEl.textContent = new Date().toLocaleTimeString('sq-AL', { hour12: false });
+
+            if (this.uptimeEl) {
+                let t = Math.floor((Date.now() - this.startTime) / 1000);
+                let h = String(Math.floor(t / 3600)).padStart(2, '0');
+                let m = String(Math.floor((t % 3600) / 60)).padStart(2, '0');
+                let s = String(t % 60).padStart(2, '0');
+                this.uptimeEl.textContent = `${h}:${m}:${s}`;
+            }
+        }, 1000);
     }
 
     /* ================= PLAYER ================= */
 
     togglePlay() {
-        if (this.video.paused) this.video.play().catch(()=>{});
+        if (this.video.paused) this.video.play().catch(() => {});
         else this.video.pause();
-    }
-
-    toggleMute() {
-        this.video.muted = !this.video.muted;
-    }
-
-    changeVolume(delta) {
-        let v = Math.min(100, Math.max(0, this.video.volume * 100 + delta));
-        this.video.volume = v / 100;
-        this.volumeSlider.value = v;
-        localStorage.setItem('volume', this.video.volume);
-    }
-
-    loadVolume() {
-        const v = localStorage.getItem('volume');
-        if (v !== null) {
-            this.video.volume = parseFloat(v);
-            this.volumeSlider.value = this.video.volume * 100;
-        }
-    }
-
-    /* ================= CHANNEL ================= */
-
-    playChannel(channel) {
-        if (!channel || !channel.url) return;
-        this.currentChannel = channel;
-        this.channelName.textContent = channel.name;
-        this.playStream(channel.url);
     }
 
     playStream(url) {
         this.showLoading();
         this.clearStream();
 
-        // 1️⃣ Native HLS (Android / Smart TV)
+        // Native HLS (TV / Android)
         if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
             this.video.src = url;
             this.video.play().then(() => {
                 this.video.muted = false;
                 this.hideLoading();
-            }).catch(()=>{});
+            }).catch(() => {});
             return;
         }
 
-        // 2️⃣ HLS.js (Chrome / Edge)
+        // HLS.js (Chrome / Edge)
         if (window.Hls && Hls.isSupported()) {
-            this.hls = new Hls({
-                maxBufferLength: 60,
-                backBufferLength: 30,
-                enableWorker: true
-            });
-
+            this.hls = new Hls();
             this.hls.loadSource(url);
             this.hls.attachMedia(this.video);
 
@@ -133,26 +99,17 @@ class IptvPlayerPro {
                 this.video.play().then(() => {
                     this.video.muted = false;
                     this.hideLoading();
-                }).catch(()=>{});
+                }).catch(() => {});
             });
 
             this.hls.on(Hls.Events.ERROR, (_, data) => {
-                if (data.fatal) {
-                    this.showError('Stream error');
-                }
+                if (data.fatal) this.showError();
             });
-            return;
         }
-
-        // 3️⃣ Fallback
-        this.video.src = url;
-        this.video.play().catch(()=>{});
-        this.hideLoading();
     }
 
     clearStream() {
         if (this.hls) {
-            this.hls.detachMedia();
             this.hls.destroy();
             this.hls = null;
         }
@@ -160,43 +117,65 @@ class IptvPlayerPro {
         this.video.src = '';
     }
 
+    /* ================= CHANNELS ================= */
+
+    playChannel(channel) {
+        if (!channel) return;
+        this.currentChannel = channel;
+        if (this.channelName) this.channelName.textContent = channel.name;
+        this.playStream(channel.url);
+        this.highlightChannel(channel);
+    }
+
     prevChannel() {
-        if (!this.channels.length) return;
         let i = this.channels.indexOf(this.currentChannel);
-        this.playChannel(this.channels[(i - 1 + this.channels.length) % this.channels.length]);
+        if (i > 0) this.playChannel(this.channels[i - 1]);
     }
 
     nextChannel() {
-        if (!this.channels.length) return;
         let i = this.channels.indexOf(this.currentChannel);
-        this.playChannel(this.channels[(i + 1) % this.channels.length]);
+        if (i < this.channels.length - 1) this.playChannel(this.channels[i + 1]);
+    }
+
+    renderChannels() {
+        if (!this.channelsGrid) return;
+        this.channelsGrid.innerHTML = '';
+
+        this.channels.forEach(ch => {
+            const card = document.createElement('div');
+            card.className = 'channel-card';
+            card.innerHTML = `
+                <div class="channel-logo-card">
+                    <span class="logo-fallback">${ch.name[0]}</span>
+                </div>
+                <div class="channel-info-card">
+                    <h4>${ch.name}</h4>
+                </div>
+            `;
+            card.onclick = () => this.playChannel(ch);
+            this.channelsGrid.appendChild(card);
+        });
+    }
+
+    highlightChannel(channel) {
+        document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
+        let i = this.channels.indexOf(channel);
+        if (this.channelsGrid.children[i])
+            this.channelsGrid.children[i].classList.add('active');
     }
 
     /* ================= UI ================= */
 
     showLoading() {
-        this.loading.style.display = 'block';
+        if (this.loading) this.loading.style.display = 'flex';
     }
 
     hideLoading() {
-        this.loading.style.display = 'none';
+        if (this.loading) this.loading.style.display = 'none';
     }
 
-    showError(msg) {
-        this.error.querySelector('h4').textContent = msg;
-        this.error.style.display = 'block';
-    }
-
-    updateClock() {
-        this.currentTimeEl.textContent = new Date().toLocaleTimeString('sq-AL', { hour12:false });
-    }
-
-    updateUptime() {
-        let t = Math.floor((Date.now() - this.startTime) / 1000);
-        let h = String(Math.floor(t / 3600)).padStart(2,'0');
-        let m = String(Math.floor((t % 3600) / 60)).padStart(2,'0');
-        let s = String(t % 60).padStart(2,'0');
-        this.uptimeEl.textContent = `${h}:${m}:${s}`;
+    showError() {
+        if (this.error) this.error.style.display = 'flex';
     }
 
     /* ================= DEMO ================= */
@@ -210,13 +189,20 @@ class IptvPlayerPro {
             {
                 name: 'RTK 2',
                 url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+            },
+            {
+                name: 'RTSH 1',
+                url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
             }
         ];
+
+        this.renderChannels();
         this.playChannel(this.channels[0]);
     }
 }
 
-/* INIT */
+/* ================= START ================= */
+
 document.addEventListener('DOMContentLoaded', () => {
     window.player = new IptvPlayerPro();
     player.loadDemo();
