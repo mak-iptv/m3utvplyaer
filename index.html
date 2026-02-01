@@ -3,131 +3,697 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTV Player - Live TV, VOD, Series</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Web IPTV Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #4cc9f0;
+            margin-bottom: 10px;
+        }
+
+        .player-section {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        #player-container {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            min-height: 400px;
+        }
+
+        #video-player {
+            width: 100%;
+            height: 100%;
+        }
+
+        .player-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #4361ee;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #3a56d4;
+        }
+
+        button.active {
+            background: #f72585;
+        }
+
+        .channels-section {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            height: 500px;
+        }
+
+        .categories {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .category-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .category-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .category-item.active {
+            background: #4361ee;
+        }
+
+        .channels-list {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .channel-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .channel-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .channel-item.playing {
+            background: rgba(67, 97, 238, 0.3);
+            border-left: 3px solid #f72585;
+        }
+
+        .channel-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+
+        .channel-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .channel-category {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            color: #4cc9f0;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            color: white;
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        .search-box {
+            margin: 20px 0;
+        }
+
+        #search-input {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .epg-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .epg-info.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #4cc9f0;
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .favorites {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 300px;
+        }
+
+        .favorite-item {
+            display: inline-block;
+            background: #4361ee;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1024px) {
+            .player-section,
+            .channels-section,
+            .input-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .channels-section {
+                height: auto;
+            }
+            
+            .channels-list {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="logo">
-            <i class="fas fa-tv"></i>
-            <span>IPTV Player</span>
-        </div>
-        
-        <div class="server-config">
-            <input type="text" id="server-url" placeholder="Server URL" value="http://example.com:8080">
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button id="connect-btn"><i class="fas fa-plug"></i> Lidhu</button>
-        </div>
-    </header>
-
-    <!-- Main Container -->
     <div class="container">
-        <!-- Sidebar Navigation -->
-        <nav class="sidebar">
-            <ul class="nav-menu">
-                <li class="active" data-tab="live"><i class="fas fa-broadcast-tower"></i> Live TV</li>
-                <li data-tab="vod"><i class="fas fa-film"></i> VOD</li>
-                <li data-tab="series"><i class="fas fa-tv"></i> Seri</li>
-                <li data-tab="categories"><i class="fas fa-list"></i> Kategoritë</li>
-                <li data-tab="favorites"><i class="fas fa-star"></i> Favoritet</li>
-                <li data-tab="settings"><i class="fas fa-cog"></i> Cilësime</li>
-            </ul>
+        <header>
+            <h1>📺 Web IPTV Player</h1>
+            <p>Shikoni kanalet tuaja të preferuara në internet</p>
+        </header>
+
+        <div class="input-section">
+            <div class="input-group">
+                <h3>M3U Playlist</h3>
+                <input type="text" id="m3u-url" placeholder="https://example.com/playlist.m3u">
+                <button onclick="loadM3U()">Ngarko M3U</button>
+            </div>
+
+            <div class="input-group">
+                <h3>Xtream Codes API</h3>
+                <input type="text" id="server-url" placeholder="http://server.com:8080">
+                <input type="text" id="username" placeholder="Përdoruesi">
+                <input type="text" id="password" placeholder="Fjalëkalimi" type="password">
+                <button onclick="loginXtream()">Kyçu në Xtream</button>
+            </div>
+        </div>
+
+        <div class="error" id="error-message"></div>
+
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Kërko kanale...">
+        </div>
+
+        <div class="player-section">
+            <div id="player-container">
+                <video id="video-player" controls crossorigin="anonymous"></video>
+                <div class="player-info" id="player-info"></div>
+            </div>
             
-            <div class="playlist-import">
-                <h4><i class="fas fa-file-import"></i> Importo M3U</h4>
-                <input type="file" id="m3u-file" accept=".m3u,.m3u8">
-                <input type="text" id="m3u-url" placeholder="OSE shkruaj URL M3U">
-                <button id="load-m3u"><i class="fas fa-upload"></i> Ngarko</button>
+            <div class="epg-info" id="epg-info">
+                <h3>Programi i Sotëm</h3>
+                <div id="epg-details"></div>
             </div>
-        </nav>
+        </div>
 
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Video Player -->
-            <div class="video-section">
-                <div class="video-wrapper">
-                    <video id="main-video" controls crossorigin="anonymous">
-                        <!-- Video source do të vendoset me JavaScript -->
-                    </video>
-                    <div class="player-controls">
-                        <button id="play-btn"><i class="fas fa-play"></i></button>
-                        <button id="pause-btn"><i class="fas fa-pause"></i></button>
-                        <input type="range" id="volume-slider" min="0" max="100" value="80">
-                        <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
-                        <span id="now-playing">Asgjë nuk po luhet</span>
-                    </div>
-                </div>
-                
-                <!-- EPG Info -->
-                <div class="epg-section">
-                    <h3><i class="fas fa-tv"></i> Programi Aktual</h3>
-                    <div id="epg-info">Duke ngarkuar...</div>
-                </div>
+        <div class="channels-section">
+            <div class="categories">
+                <h3>Kategoritë</h3>
+                <div id="categories-list"></div>
             </div>
+            
+            <div class="channels-list" id="channels-grid"></div>
+        </div>
 
-            <!-- Content Lists -->
-            <div class="content-section">
-                <!-- Live TV -->
-                <div class="tab-content active" id="live-tab">
-                    <div class="section-header">
-                        <h2><i class="fas fa-broadcast-tower"></i> Live TV</h2>
-                        <select id="live-category-filter">
-                            <option value="all">Të gjitha kategoritë</option>
-                            <!-- Kategoritë do të mbushen me JavaScript -->
-                        </select>
-                    </div>
-                    <div class="channel-grid" id="live-channels">
-                        <!-- Kanalet do të mbushen me JavaScript -->
-                    </div>
-                </div>
-
-                <!-- VOD -->
-                <div class="tab-content" id="vod-tab">
-                    <div class="section-header">
-                        <h2><i class="fas fa-film"></i> Video on Demand</h2>
-                        <div class="search-box">
-                            <input type="text" id="vod-search" placeholder="Kërko filma...">
-                            <i class="fas fa-search"></i>
-                        </div>
-                    </div>
-                    <div class="vod-grid" id="vod-movies">
-                        <!-- Filmat do të mbushen me JavaScript -->
-                    </div>
-                </div>
-
-                <!-- Series -->
-                <div class="tab-content" id="series-tab">
-                    <div class="section-header">
-                        <h2><i class="fas fa-tv"></i> Seri TV</h2>
-                        <select id="series-category-filter">
-                            <option value="all">Të gjitha kategoritë</option>
-                        </select>
-                    </div>
-                    <div class="series-list" id="series-container">
-                        <!-- Seritë do të mbushen me JavaScript -->
-                    </div>
-                </div>
-
-                <!-- Favorites -->
-                <div class="tab-content" id="favorites-tab">
-                    <h2><i class="fas fa-star"></i> Favoritet</h2>
-                    <div id="favorites-container"></div>
-                </div>
-            </div>
-        </main>
+        <div class="favorites" id="favorites-box">
+            <h4>🖤 Të Preferuarat</h4>
+            <div id="favorites-list"></div>
+        </div>
     </div>
 
-    <!-- JavaScript Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet">
-    
-    <!-- Our Scripts -->
-    <script src="js/m3u-parser.js"></script>
-    <script src="js/xtream-api.js"></script>
-    <script src="js/main.js"></script>
+    <script>
+        class IPTVPlayer {
+            constructor() {
+                this.channels = [];
+                this.categories = [];
+                this.currentChannel = null;
+                this.favorites = new Set();
+                this.player = document.getElementById('video-player');
+                this.epgCache = new Map();
+                
+                this.loadFavorites();
+                this.initPlayer();
+                this.setupEventListeners();
+            }
+
+            initPlayer() {
+                // Përdor HLS.js për streaming më të mirë
+                if (Hls.isSupported()) {
+                    this.hls = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        backBufferLength: 90
+                    });
+                    
+                    this.hls.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS error:', data);
+                        this.showError('Gabim në streaming. Duke provuar alternativë...');
+                    });
+                }
+            }
+
+            async loadM3U() {
+                const url = document.getElementById('m3u-url').value.trim();
+                if (!url) {
+                    this.showError('Ju lutem vendosni URL-në e M3U');
+                    return;
+                }
+
+                try {
+                    this.showLoading('Duke ngarkuar playlist...');
+                    const response = await fetch(url);
+                    const text = await response.text();
+                    
+                    if (!text.includes('#EXTM3U')) {
+                        throw new Error('Format i pavlefshëm M3U');
+                    }
+                    
+                    this.channels = this.parseM3U(text);
+                    this.updateCategories();
+                    this.renderChannels();
+                    this.hideLoading();
+                    
+                } catch (error) {
+                    this.showError('Gabim në ngarkimin e M3U: ' + error.message);
+                    this.hideLoading();
+                }
+            }
+
+            parseM3U(data) {
+                const channels = [];
+                const lines = data.split('\n');
+                let currentChannel = null;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    if (line.startsWith('#EXTINF:')) {
+                        currentChannel = {
+                            id: Date.now() + i,
+                            name: line.split(',').pop().trim(),
+                            category: (line.match(/group-title="([^"]+)"/) || [])[1] || 'Other',
+                            logo: (line.match(/tvg-logo="([^"]+)"/) || [])[1] || '',
+                            url: '',
+                            tvgId: (line.match(/tvg-id="([^"]+)"/) || [])[1] || ''
+                        };
+                    } else if (currentChannel && line && !line.startsWith('#')) {
+                        currentChannel.url = line;
+                        channels.push({...currentChannel});
+                        currentChannel = null;
+                    }
+                }
+
+                return channels;
+            }
+
+            async loginXtream() {
+                const server = document.getElementById('server-url').value.trim();
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+
+                if (!server || !username || !password) {
+                    this.showError('Ju lutem plotësoni të gjitha fushat');
+                    return;
+                }
+
+                try {
+                    this.showLoading('Duke kyçur...');
+                    
+                    // Merr kategoritë
+                    const catsUrl = `${server}/player_api.php?username=${username}&password=${password}&action=get_live_categories`;
+                    const catsResponse = await fetch(catsUrl);
+                    const categories = await catsResponse.json();
+                    
+                    this.categories = categories.map(cat => ({
+                        id: cat.category_id,
+                        name: cat.category_name
+                    }));
+                    
+                    // Merr të gjitha kanalet
+                    const channelsUrl = `${server}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
+                    const channelsResponse = await fetch(channelsUrl);
+                    const channelsData = await channelsResponse.json();
+                    
+                    this.channels = channelsData.map(stream => ({
+                        id: stream.stream_id,
+                        name: stream.name,
+                        category: stream.category_name || stream.category_id,
+                        logo: stream.stream_icon,
+                        url: `${server}/live/${username}/${password}/${stream.stream_id}.m3u8`,
+                        epgChannelId: stream.epg_channel_id
+                    }));
+                    
+                    this.updateCategories();
+                    this.renderChannels();
+                    this.hideLoading();
+                    
+                } catch (error) {
+                    this.showError('Gabim në kyçje: ' + error.message);
+                    this.hideLoading();
+                }
+            }
+
+            updateCategories() {
+                const categoriesDiv = document.getElementById('categories-list');
+                categoriesDiv.innerHTML = '<div class="category-item active" onclick="player.filterChannels()">Të Gjitha</div>';
+                
+                const uniqueCats = [...new Set(this.channels.map(c => c.category))];
+                
+                uniqueCats.forEach(cat => {
+                    const div = document.createElement('div');
+                    div.className = 'category-item';
+                    div.textContent = cat;
+                    div.onclick = () => this.filterChannels(cat);
+                    categoriesDiv.appendChild(div);
+                });
+            }
+
+            filterChannels(category = null) {
+                const filtered = category 
+                    ? this.channels.filter(c => c.category === category)
+                    : this.channels;
+                
+                this.renderChannels(filtered);
+                
+                // Përditëso kategori aktive
+                document.querySelectorAll('.category-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                event.target.classList.add('active');
+            }
+
+            renderChannels(channels = this.channels) {
+                const container = document.getElementById('channels-grid');
+                container.innerHTML = '';
+                
+                channels.forEach(channel => {
+                    const div = document.createElement('div');
+                    div.className = `channel-item ${this.currentChannel?.id === channel.id ? 'playing' : ''}`;
+                    div.innerHTML = `
+                        ${channel.logo ? `<img src="${channel.logo}" class="channel-logo" onerror="this.style.display='none'">` : ''}
+                        <div>
+                            <div class="channel-name">${channel.name}</div>
+                            <div class="channel-category">${channel.category}</div>
+                            <button onclick="player.toggleFavorite(${channel.id}, event)">${this.favorites.has(channel.id) ? '♥' : '♡'}</button>
+                        </div>
+                    `;
+                    
+                    div.onclick = () => this.playChannel(channel);
+                    container.appendChild(div);
+                });
+            }
+
+            async playChannel(channel) {
+                this.currentChannel = channel;
+                
+                // Përditëso UI
+                document.querySelectorAll('.channel-item').forEach(item => {
+                    item.classList.remove('playing');
+                });
+                event.target.closest('.channel-item').classList.add('playing');
+                
+                // Përditëso info player
+                document.getElementById('player-info').textContent = `${channel.name} | ${channel.category}`;
+                
+                // Ndrysho titullin e faqes
+                document.title = `IPTV - ${channel.name}`;
+                
+                // Ngarko stream
+                if (Hls.isSupported() && this.hls) {
+                    this.hls.loadSource(channel.url);
+                    this.hls.attachMedia(this.player);
+                    this.player.play();
+                } else if (this.player.canPlayType('application/vnd.apple.mpegurl')) {
+                    this.player.src = channel.url;
+                    this.player.play();
+                } else {
+                    this.showError('Shfletuesi juaj nuk mbështet HLS streaming');
+                }
+                
+                // Merr EPG (nëse ka)
+                if (channel.tvgId || channel.epgChannelId) {
+                    await this.loadEPG(channel);
+                }
+                
+                // Shto në historik
+                this.addToHistory(channel);
+            }
+
+            async loadEPG(channel) {
+                try {
+                    const epgUrl = `https://iptv-org.github.io/epg/guides/${channel.tvgId || channel.epgChannelId}.json`;
+                    const response = await fetch(epgUrl);
+                    const epgData = await response.json();
+                    
+                    const now = new Date();
+                    const currentProgram = epgData.programs?.find(p => 
+                        new Date(p.start) <= now && new Date(p.stop) >= now
+                    );
+                    
+                    if (currentProgram) {
+                        const epgDiv = document.getElementById('epg-details');
+                        epgDiv.innerHTML = `
+                            <strong>${currentProgram.title}</strong><br>
+                            <small>${new Date(currentProgram.start).toLocaleTimeString()} - ${new Date(currentProgram.stop).toLocaleTimeString()}</small><br>
+                            <p>${currentProgram.desc || 'Nuk ka përshkrim'}</p>
+                        `;
+                        document.getElementById('epg-info').classList.add('show');
+                    }
+                    
+                } catch (error) {
+                    // EPG optional, hidhe gabimin silent
+                }
+            }
+
+            toggleFavorite(channelId, event) {
+                event.stopPropagation();
+                
+                if (this.favorites.has(channelId)) {
+                    this.favorites.delete(channelId);
+                    event.target.textContent = '♡';
+                } else {
+                    this.favorites.add(channelId);
+                    event.target.textContent = '♥';
+                }
+                
+                this.saveFavorites();
+                this.updateFavoritesList();
+            }
+
+            updateFavoritesList() {
+                const list = document.getElementById('favorites-list');
+                list.innerHTML = '';
+                
+                const favoriteChannels = this.channels.filter(c => this.favorites.has(c.id));
+                
+                favoriteChannels.forEach(channel => {
+                    const span = document.createElement('span');
+                    span.className = 'favorite-item';
+                    span.textContent = channel.name.substring(0, 15);
+                    span.title = channel.name;
+                    span.onclick = () => this.playChannel(channel);
+                    list.appendChild(span);
+                });
+            }
+
+            addToHistory(channel) {
+                let history = JSON.parse(localStorage.getItem('iptv_history') || '[]');
+                
+                history = history.filter(h => h.id !== channel.id);
+                history.unshift({
+                    id: channel.id,
+                    name: channel.name,
+                    time: new Date().toISOString()
+                });
+                
+                if (history.length > 50) history.pop();
+                localStorage.setItem('iptv_history', JSON.stringify(history));
+            }
+
+            loadFavorites() {
+                const saved = localStorage.getItem('iptv_favorites');
+                if (saved) {
+                    this.favorites = new Set(JSON.parse(saved));
+                }
+            }
+
+            saveFavorites() {
+                localStorage.setItem('iptv_favorites', JSON.stringify([...this.favorites]));
+            }
+
+            searchChannels(query) {
+                const filtered = this.channels.filter(channel =>
+                    channel.name.toLowerCase().includes(query.toLowerCase()) ||
+                    channel.category.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                this.renderChannels(filtered);
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('error-message');
+                errorDiv.textContent = message;
+                errorDiv.classList.add('show');
+                
+                setTimeout(() => {
+                    errorDiv.classList.remove('show');
+                }, 5000);
+            }
+
+            showLoading(message) {
+                const container = document.getElementById('channels-grid');
+                container.innerHTML = `<div class="loading">${message}</div>`;
+            }
+
+            hideLoading() {
+                // Do të mbulohet nga renderChannels
+            }
+
+            setupEventListeners() {
+                // Search
+                document.getElementById('search-input').addEventListener('input', (e) => {
+                    this.searchChannels(e.target.value);
+                });
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        this.player.paused ? this.player.play() : this.player.pause();
+                    }
+                });
+
+                // Përditëso favorites kur ngarkohet
+                this.updateFavoritesList();
+            }
+        }
+
+        // Inicializo player
+        let player;
+        document.addEventListener('DOMContentLoaded', () => {
+            player = new IPTVPlayer();
+            
+            // Ngarko HLS library
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+            document.head.appendChild(script);
+            
+            // Shembuj të paracaktuar (opsional)
+            document.getElementById('m3u-url').value = localStorage.getItem('last_m3u_url') || '';
+            document.getElementById('server-url').value = localStorage.getItem('last_server_url') || '';
+        });
+    </script>
 </body>
 </html>
