@@ -1625,3 +1625,136 @@ body {
         text-align: center;
     }
 }
+
+/* Debug Info Styles */
+.debug-info {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-sm);
+    padding: 15px;
+    margin-top: 10px;
+    font-family: monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+}
+
+.debug-info pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: var(--success);
+}
+
+.debug-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* Connection Test Panel */
+.connection-test {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-sm);
+    padding: 15px;
+    margin-top: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.test-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Error Messages */
+.error-message {
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid var(--danger);
+    border-radius: var(--border-radius-sm);
+    padding: 10px;
+    margin: 10px 0;
+    color: var(--danger);
+    font-size: 13px;
+}
+
+.error-message i {
+    margin-right: 8px;
+}
+
+/* Warning Messages */
+.warning-message {
+    background: rgba(243, 156, 18, 0.1);
+    border: 1px solid var(--warning);
+    border-radius: var(--border-radius-sm);
+    padding: 10px;
+    margin: 10px 0;
+    color: var(--warning);
+    font-size: 13px;
+}
+
+/* Success Messages */
+.success-message {
+    background: rgba(46, 204, 113, 0.1);
+    border: 1px solid var(--success);
+    border-radius: var(--border-radius-sm);
+    padding: 10px;
+    margin: 10px 0;
+    color: var(--success);
+    font-size: 13px;
+}
+
+/* Loading Animation */
+.loading-dots {
+    display: inline-block;
+}
+
+.loading-dots::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+
+/* Advanced Settings */
+.advanced-settings {
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-sm);
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.advanced-settings summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 5px 0;
+    outline: none;
+}
+
+.advanced-settings summary:hover {
+    color: var(--text-primary);
+}
+
+.advanced-settings-content {
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 10px;
+}
+
+/* URL Preview */
+.url-preview {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-sm);
+    padding: 8px 12px;
+    margin: 5px 0;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    word-break: break-all;
+    border: 1px solid var(--border-color);
+}
