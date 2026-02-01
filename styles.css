@@ -1,247 +1,55 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Segoe UI',system-ui,-apple-system,sans-serif
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
 }
 
-:root{
-    --primary:#2196f3;
-    --primary-dark:#1976d2;
-    --secondary:#ff4081;
-    --success:#4caf50;
-    --danger:#f44336;
-    --warning:#ff9800;
-    --dark:#121212;
-    --dark-light:#1e1e1e;
-    --dark-lighter:#2d2d2d;
-    --text:#fff;
-    --text-secondary:#b0b0b0;
-    --border:#404040;
-    --shadow:0 4px 20px rgba(0,0,0,.3)
+body {
+    background: #121212;
+    color: #fff;
 }
 
-body{
-    background:var(--dark);
-    color:var(--text);
-    height:100vh;
-    overflow:hidden
+.app-container {
+    display: flex;
+    height: 100vh;
 }
 
-.app-container{
-    display:flex;
-    flex-direction:column;
-    height:100vh
+.player-section {
+    flex: 2;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* ================= HEADER ================= */
-
-.main-header{
-    background:var(--dark-light);
-    padding:12px 20px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-bottom:1px solid var(--border)
+#mainVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
-.logo{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-size:22px;
-    font-weight:700
+.sidebar {
+    flex: 1;
+    background: #1e1e1e;
+    padding: 10px;
+    overflow-y: auto;
 }
 
-.logo i{color:var(--primary)}
-.logo-highlight{color:var(--secondary)}
-
-.header-info{
-    display:flex;
-    gap:15px;
-    align-items:center
+.channels-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
 }
 
-.status.online{
-    background:rgba(76,175,80,.2);
-    color:var(--success);
-    padding:4px 10px;
-    border-radius:12px;
-    font-size:12px
+.channel-card {
+    background: #2d2d2d;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-/* ================= MAIN ================= */
-
-.main-content{
-    flex:1;
-    display:flex;
-    overflow:hidden
-}
-
-/* ================= PLAYER ================= */
-
-.player-section{
-    flex:1;
-    background:#000;
-    position:relative
-}
-
-.video-wrapper{
-    width:100%;
-    height:100%;
-    position:relative;
-    background:#000
-}
-
-#mainVideo{
-    width:100%;
-    height:100%;
-    object-fit:contain;
-    background:#000
-}
-
-/* Controls always visible on TV */
-.controls-overlay{
-    position:absolute;
-    bottom:0;
-    left:0;
-    right:0;
-    padding:16px;
-    background:linear-gradient(to top,rgba(0,0,0,.9),transparent);
-    display:flex;
-    justify-content:center;
-    gap:12px
-}
-
-/* Desktop hover */
-@media (hover:hover){
-    .controls-overlay{display:none}
-    .video-wrapper:hover .controls-overlay{display:flex}
-}
-
-.control-btn{
-    width:44px;
-    height:44px;
-    border-radius:50%;
-    background:rgba(255,255,255,.15);
-    border:none;
-    color:#fff;
-    cursor:pointer
-}
-
-.control-btn.large{
-    width:60px;
-    height:60px;
-    font-size:20px
-}
-
-.volume-control-overlay{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    background:rgba(255,255,255,.15);
-    padding:6px 12px;
-    border-radius:20px
-}
-
-#volumeSliderOverlay{
-    width:90px
-}
-
-/* ================= LOADING ================= */
-
-.loading-spinner{
-    position:absolute;
-    inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column
-}
-
-.spinner{
-    width:40px;
-    height:40px;
-    border:4px solid rgba(255,255,255,.15);
-    border-top:4px solid var(--primary);
-    border-radius:50%;
-    animation:spin 1s linear infinite
-}
-
-@keyframes spin{
-    to{transform:rotate(360deg)}
-}
-
-/* ================= ERROR ================= */
-
-.error-message{
-    position:absolute;
-    inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    background:rgba(0,0,0,.85)
-}
-
-/* ================= SIDEBAR ================= */
-
-.sidebar{
-    width:340px;
-    background:var(--dark-light);
-    border-left:1px solid var(--border);
-    display:flex;
-    flex-direction:column;
-    overflow:hidden
-}
-
-.channels-panel{
-    flex:1;
-    overflow:auto;
-    padding:12px
-}
-
-.channels-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-    gap:12px
-}
-
-.channel-card{
-    background:var(--dark);
-    border-radius:10px;
-    padding:10px;
-    cursor:pointer
-}
-
-.channel-card.active{
-    border:2px solid var(--primary)
-}
-
-/* ================= FOOTER ================= */
-
-.status-bar{
-    background:var(--dark-light);
-    padding:10px 20px;
-    border-top:1px solid var(--border);
-    display:flex;
-    justify-content:space-between
-}
-
-/* ================= SCROLL ================= */
-
-::-webkit-scrollbar{
-    width:6px
-}
-
-::-webkit-scrollbar-thumb{
-    background:var(--border);
-    border-radius:4px
-}
-
-/* ================= MOBILE ================= */
-
-@media(max-width:768px){
-    .main-content{flex-direction:column}
-    .sidebar{width:100%;height:380px}
+.channel-card:hover {
+    background: #2196f3;
 }
