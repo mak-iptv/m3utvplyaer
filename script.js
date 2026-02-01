@@ -1,20 +1,20 @@
-// IPTV Player me mbështetje për Xtream Codes dhe M3U
-class IptvPlayer {
+class IptvPlayerPro {
     constructor() {
-        this.currentChannel = null;
         this.channels = [];
         this.categories = [];
-        this.playlists = [];
-        this.epgData = {};
-        this.hls = null;
-        this.currentCategory = null;
+        this.currentChannel = null;
+        this.favorites = new Set();
         this.settings = {
-            playerType: 'hls',
-            defaultQuality: '720p',
+            playerEngine: 'hls',
+            defaultQuality: '720',
             autoPlay: true,
-            bufferSize: 10,
-            maxBufferLength: 60
+            autoNext: false,
+            rememberVolume: true
         };
+        
+        this.hls = null;
+        this.isPlaying = false;
+        this.startTime = Date.now();
         
         this.init();
     }
@@ -23,79 +23,91 @@ class IptvPlayer {
         this.cacheElements();
         this.bindEvents();
         this.loadSettings();
-        this.setupPlayer();
+        this.loadFavorites();
+        this.updateClock();
+        this.loadDemoData();
+        
+        // Start clock update
+        setInterval(() => this.updateClock(), 1000);
+        setInterval(() => this.updateUptime(), 1000);
     }
     
     cacheElements() {
-        // Player elements
-        this.videoPlayer = document.getElementById('videoPlayer');
-        this.loadingIndicator = document.getElementById('loadingIndicator');
-        this.noStreamMessage = document.getElementById('noStreamMessage');
+        // Video elements
+        this.video = document.getElementById('mainVideo');
+        this.loadingSpinner = document.getElementById('loadingSpinner');
+        this.errorMessage = document.getElementById('errorMessage');
         
-        // Channel info
-        this.currentChannelName = document.getElementById('currentChannelName');
-        this.currentProgram = document.getElementById('currentProgram');
-        this.currentLogo = document.getElementById('currentLogo');
+        // Channel info elements
+        this.channelNameOverlay = document.getElementById('channelNameOverlay');
+        this.programInfoOverlay = document.getElementById('programInfoOverlay');
+        this.channelLogoOverlay = document.getElementById('channelLogoOverlay');
+        this.channelLogoNow = document.getElementById('channelLogoNow');
+        this.nowPlayingChannel = document.getElementById('nowPlayingChannel');
+        this.nowPlayingProgram = document.getElementById('nowPlayingProgram');
         
         // Control elements
         this.playPauseBtn = document.getElementById('playPauseBtn');
-        this.prevChannelBtn = document.getElementById('prevChannel');
-        this.nextChannelBtn = document.getElementById('nextChannel');
-        this.volumeSlider = document.getElementById('volumeSlider');
-        this.volumeIcon = document.getElementById('volumeIcon');
-        this.fullscreenBtn = document.getElementById('fullscreen-btn');
+        this.prevChannelBtn = document.getElementById('prevChannelBtn');
+        this.nextChannelBtn = document.getElementById('nextChannelBtn');
+        this.rewindBtn = document.getElementById('rewindBtn');
+        this.forwardBtn = document.getElementById('forwardBtn');
+        this.muteBtn = document.getElementById('muteBtn');
+        this.retryStreamBtn = document.getElementById('retryStreamBtn');
         
-        // Stream info
-        this.streamResolution = document.getElementById('streamResolution');
-        this.streamBitrate = document.getElementById('streamBitrate');
-        this.streamStatus = document.getElementById('streamStatus');
+        // Volume elements
+        this.volumeSliderOverlay = document.getElementById('volumeSliderOverlay');
+        this.volumeIconOverlay = document.getElementById('volumeIconOverlay');
         
-        // Login elements
-        this.serverUrl = document.getElementById('serverUrl');
-        this.username = document.getElementById('username');
-        this.password = document.getElementById('password');
-        this.loginBtn = document.getElementById('loginBtn');
-        this.loadM3uBtn = document.getElementById('loadM3uBtn');
-        this.importXtreamBtn = document.getElementById('importXtreamBtn');
+        // Progress elements
+        this.seekBar = document.getElementById('seekBar');
+        this.currentTimeDisplay = document.getElementById('currentTimeDisplay');
+        this.durationDisplay = document.getElementById('durationDisplay');
         
-        // Categories & channels
+        // Quality selector
+        this.qualitySelect = document.getElementById('qualitySelect');
+        
+        // Connection elements
+        this.xtreamServer = document.getElementById('xtreamServer');
+        this.xtreamUsername = document.getElementById('xtreamUsername');
+        this.xtreamPassword = document.getElementById('xtreamPassword');
+        this.connectBtn = document.getElementById('connectBtn');
+        this.demoBtn = document.getElementById('demoBtn');
+        
+        // Type buttons
+        this.typeBtns = document.querySelectorAll('.type-btn');
+        this.connectionForms = document.querySelectorAll('.connection-form');
+        
+        // Category elements
         this.categoriesList = document.getElementById('categoriesList');
-        this.channelsList = document.getElementById('channelsList');
-        this.channelCount = document.getElementById('channelCount');
-        this.searchChannel = document.getElementById('searchChannel');
+        this.categorySearch = document.getElementById('categorySearch');
         
-        // EPG elements
-        this.epgInfo = document.getElementById('epgInfo');
-        this.epgTitle = document.getElementById('epgTitle');
-        this.epgDescription = document.getElementById('epgDescription');
-        this.epgStart = document.getElementById('epgStart');
-        this.epgEnd = document.getElementById('epgEnd');
-        this.epgBtn = document.getElementById('epg-btn');
+        // Channel elements
+        this.channelsGrid = document.getElementById('channelsGrid');
+        this.channelsListView = document.getElementById('channelsListView');
+        this.channelsCount = document.getElementById('channelsCount');
+        this.channelSearch = document.getElementById('channelSearch');
+        this.viewBtns = document.querySelectorAll('.view-btn');
         
-        // Modal elements
+        // Status elements
+        this.currentSource = document.getElementById('currentSource');
+        this.channelsLoaded = document.getElementById('channelsLoaded');
+        this.uptime = document.getElementById('uptime');
+        this.currentTimeElement = document.getElementById('currentTime');
+        
+        // Settings elements
+        this.settingsBtn = document.getElementById('settingsBtn');
         this.settingsModal = document.getElementById('settingsModal');
         this.closeSettingsBtn = document.getElementById('closeSettingsBtn');
         this.saveSettingsBtn = document.getElementById('saveSettingsBtn');
-        this.m3uModal = document.getElementById('m3uModal');
-        this.closeM3uBtn = document.getElementById('closeM3uBtn');
-        this.epgModal = document.getElementById('epgModal');
-        this.closeEpgBtn = document.getElementById('closeEpgBtn');
-        this.m3uUrl = document.getElementById('m3uUrl');
-        this.m3uFile = document.getElementById('m3uFile');
-        this.parseM3uBtn = document.getElementById('parseM3uBtn');
-        this.loadM3uUrlBtn = document.getElementById('loadM3uUrlBtn');
+        this.resetSettingsBtn = document.getElementById('resetSettingsBtn');
         
-        // Settings elements
-        this.playerType = document.getElementById('playerType');
+        // Settings form elements
+        this.playerEngine = document.getElementById('playerEngine');
         this.defaultQuality = document.getElementById('defaultQuality');
-        this.autoPlayCheck = document.getElementById('autoPlayCheck');
-        this.bufferSize = document.getElementById('bufferSize');
-        this.maxBufferLength = document.getElementById('maxBufferLength');
-        this.bufferValue = document.getElementById('bufferValue');
-        this.maxBufferValue = document.getElementById('maxBufferValue');
-        
-        // EPG grid
-        this.epgGrid = document.getElementById('epgGrid');
+        this.autoPlay = document.getElementById('autoPlay');
+        this.autoNext = document.getElementById('autoNext');
+        this.rememberVolume = document.getElementById('rememberVolume');
     }
     
     bindEvents() {
@@ -103,364 +115,515 @@ class IptvPlayer {
         this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
         this.prevChannelBtn.addEventListener('click', () => this.prevChannel());
         this.nextChannelBtn.addEventListener('click', () => this.nextChannel());
-        this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
-        this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        this.rewindBtn.addEventListener('click', () => this.seek(-10));
+        this.forwardBtn.addEventListener('click', () => this.seek(30));
+        this.muteBtn.addEventListener('click', () => this.toggleMute());
+        this.retryStreamBtn.addEventListener('click', () => this.retryStream());
         
         // Video events
-        this.videoPlayer.addEventListener('play', () => this.onPlay());
-        this.videoPlayer.addEventListener('pause', () => this.onPause());
-        this.videoPlayer.addEventListener('error', (e) => this.onPlayerError(e));
-        this.videoPlayer.addEventListener('loadedmetadata', () => this.onLoadedMetadata());
+        this.video.addEventListener('play', () => this.onPlay());
+        this.video.addEventListener('pause', () => this.onPause());
+        this.video.addEventListener('waiting', () => this.onBuffering());
+        this.video.addEventListener('playing', () => this.onPlaying());
+        this.video.addEventListener('error', (e) => this.onVideoError(e));
+        this.video.addEventListener('loadedmetadata', () => this.onLoadedMetadata());
         
-        // Login events
-        this.loginBtn.addEventListener('click', () => this.loginXtream());
-        this.loadM3uBtn.addEventListener('click', () => this.showM3uModal());
-        this.importXtreamBtn.addEventListener('click', () => this.importXtreamCodes());
+        // Volume control
+        this.volumeSliderOverlay.addEventListener('input', (e) => {
+            const volume = e.target.value / 100;
+            this.video.volume = volume;
+            this.updateVolumeIcon(volume);
+        });
         
-        // Search
-        this.searchChannel.addEventListener('input', (e) => this.searchChannels(e.target.value));
+        // Progress bar
+        this.seekBar.addEventListener('input', (e) => {
+            const time = (e.target.value / 100) * this.video.duration;
+            this.video.currentTime = time;
+        });
         
-        // Modal events
-        this.closeSettingsBtn.addEventListener('click', () => this.hideModal(this.settingsModal));
+        // Update progress bar
+        this.video.addEventListener('timeupdate', () => {
+            if (this.video.duration) {
+                const percent = (this.video.currentTime / this.video.duration) * 100;
+                this.seekBar.value = percent;
+                this.currentTimeDisplay.textContent = this.formatTime(this.video.currentTime);
+                this.durationDisplay.textContent = this.formatTime(this.video.duration);
+            }
+        });
+        
+        // Quality selector
+        this.qualitySelect.addEventListener('change', (e) => {
+            this.changeQuality(e.target.value);
+        });
+        
+        // Connection type buttons
+        this.typeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                this.switchConnectionType(type);
+            });
+        });
+        
+        // Connect button
+        this.connectBtn.addEventListener('click', () => this.connectXtream());
+        this.demoBtn.addEventListener('click', () => this.loadDemoData());
+        
+        // Search functionality
+        this.categorySearch.addEventListener('input', (e) => this.filterCategories(e.target.value));
+        this.channelSearch.addEventListener('input', (e) => this.filterChannels(e.target.value));
+        
+        // View buttons
+        this.viewBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const view = btn.dataset.view;
+                this.switchView(view);
+            });
+        });
+        
+        // Settings
+        this.settingsBtn.addEventListener('click', () => this.showSettings());
+        this.closeSettingsBtn.addEventListener('click', () => this.hideSettings());
         this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
-        this.closeM3uBtn.addEventListener('click', () => this.hideModal(this.m3uModal));
-        this.closeEpgBtn.addEventListener('click', () => this.hideModal(this.epgModal));
-        this.epgBtn.addEventListener('click', () => this.showEpgModal());
+        this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
         
-        // M3U modal events
-        this.parseM3uBtn.addEventListener('click', () => this.parseM3uFile());
-        this.loadM3uUrlBtn.addEventListener('click', () => this.loadM3uFromUrl());
-        this.m3uFile.addEventListener('change', (e) => this.previewM3uFile(e));
-        
-        // Settings tab events
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchTab(e.target));
-        });
-        
-        // Buffer size controls
-        this.bufferSize.addEventListener('input', (e) => {
-            this.bufferValue.textContent = e.target.value + 's';
-        });
-        
-        this.maxBufferLength.addEventListener('input', (e) => {
-            this.maxBufferValue.textContent = e.target.value + 's';
-        });
-        
-        // Click outside modal to close
-        window.addEventListener('click', (e) => {
-            if (e.target === this.settingsModal) this.hideModal(this.settingsModal);
-            if (e.target === this.m3uModal) this.hideModal(this.m3uModal);
-            if (e.target === this.epgModal) this.hideModal(this.epgModal);
-        });
+        // Fullscreen
+        document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            switch(e.key) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.key.toLowerCase()) {
                 case ' ':
                     e.preventDefault();
                     this.togglePlayPause();
                     break;
-                case 'ArrowLeft':
+                case 'arrowleft':
                     this.seek(-10);
                     break;
-                case 'ArrowRight':
-                    this.seek(10);
+                case 'arrowright':
+                    this.seek(30);
                     break;
-                case 'ArrowUp':
+                case 'arrowup':
                     this.changeVolume(10);
                     break;
-                case 'ArrowDown':
+                case 'arrowdown':
                     this.changeVolume(-10);
                     break;
                 case 'f':
-                case 'F':
                     this.toggleFullscreen();
                     break;
                 case 'm':
-                case 'M':
                     this.toggleMute();
+                    break;
+                case 'escape':
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    }
                     break;
             }
         });
     }
     
-    setupPlayer() {
-        // Setup HLS.js if available
-        if (typeof Hls !== 'undefined') {
-            this.hls = new Hls({
-                maxBufferSize: this.settings.bufferSize * 1000,
-                maxBufferLength: this.settings.maxBufferLength,
-                enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 90
-            });
-            
-            this.hls.on(Hls.Events.ERROR, (event, data) => {
-                console.error('HLS Error:', data);
-                if (data.fatal) {
-                    switch(data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            this.showError('Gabim në rrjet. Duke u rikonektuar...');
-                            this.hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            this.showError('Gabim në media. Duke u riluar...');
-                            this.hls.recoverMediaError();
-                            break;
-                        default:
-                            this.hls.destroy();
-                            this.showError('Gabim fatal. Ju lutem rifreskoni faqen.');
-                            break;
-                    }
-                }
-            });
-            
-            this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                console.log('HLS Manifest parsed');
-            });
-            
-            this.hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
-                this.updateStreamInfo(data);
-            });
+    // Player Controls
+    togglePlayPause() {
+        if (this.video.paused) {
+            this.video.play();
+            this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        } else {
+            this.video.pause();
+            this.playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
         }
     }
     
-    // Xtream Codes Login
-    async loginXtream() {
-        const server = this.serverUrl.value.trim();
-        const user = this.username.value.trim();
-        const pass = this.password.value.trim();
+    onPlay() {
+        this.isPlaying = true;
+        this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        this.hideError();
+    }
+    
+    onPause() {
+        this.isPlaying = false;
+        this.playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    }
+    
+    onBuffering() {
+        this.showLoading();
+    }
+    
+    onPlaying() {
+        this.hideLoading();
+    }
+    
+    onVideoError(e) {
+        console.error('Video error:', e);
+        this.showError('Gabim në riprodhim të stream-it');
+        this.hideLoading();
+    }
+    
+    onLoadedMetadata() {
+        const width = this.video.videoWidth;
+        const height = this.video.videoHeight;
+        document.getElementById('resolutionBadge').textContent = 
+            `${width}x${height}`;
+    }
+    
+    prevChannel() {
+        if (!this.currentChannel || this.channels.length === 0) return;
         
-        if (!server || !user || !pass) {
-            this.showError('Ju lutem plotësoni të gjitha fushat!');
-            return;
-        }
+        const currentIndex = this.channels.findIndex(c => c.id === this.currentChannel.id);
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : this.channels.length - 1;
+        this.playChannel(this.channels[prevIndex]);
+    }
+    
+    nextChannel() {
+        if (!this.currentChannel || this.channels.length === 0) return;
         
-        this.showLoading('Duke u lidhur me server...');
+        const currentIndex = this.channels.findIndex(c => c.id === this.currentChannel.id);
+        const nextIndex = (currentIndex + 1) % this.channels.length;
+        this.playChannel(this.channels[nextIndex]);
+    }
+    
+    seek(seconds) {
+        if (!this.video.duration) return;
         
-        try {
-            // Format server URL
-            const serverUrl = server.endsWith('/') ? server.slice(0, -1) : server;
-            
-            // Get categories from Xtream Codes API
-            const categoriesUrl = `${serverUrl}/player_api.php?username=${user}&password=${pass}&action=get_live_categories`;
-            const categoriesResponse = await fetch(categoriesUrl);
-            const categories = await categoriesResponse.json();
-            
-            // Get channels from Xtream Codes API
-            const channelsUrl = `${serverUrl}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`;
-            const channelsResponse = await fetch(channelsUrl);
-            const channels = await channelsResponse.json();
-            
-            // Format data
-            this.categories = categories.map(cat => ({
-                id: cat.category_id,
-                name: cat.category_name,
-                parent_id: cat.parent_id || 0
-            }));
-            
-            this.channels = channels.map(chan => ({
-                id: chan.stream_id,
-                name: chan.name,
-                category: chan.category_id,
-                logo: chan.stream_icon || '',
-                url: `${serverUrl}/live/${user}/${pass}/${chan.stream_id}.m3u8`,
-                epg_channel_id: chan.epg_channel_id || ''
-            }));
-            
-            // Load EPG if available
-            await this.loadEpg(serverUrl, user, pass);
-            
-            // Update UI
-            this.updateCategories();
-            this.updateChannelCount();
-            this.hideLoading();
-            
-            this.showSuccess(`U lidh me sukses! ${this.channels.length} kanale të gjetura.`);
-            
-        } catch (error) {
-            console.error('Login error:', error);
-            this.showError('Gabim në lidhje. Kontrolloni kredencialet!');
-            this.hideLoading();
+        const newTime = this.video.currentTime + seconds;
+        this.video.currentTime = Math.max(0, Math.min(newTime, this.video.duration));
+    }
+    
+    toggleMute() {
+        this.video.muted = !this.video.muted;
+        const icon = this.video.muted ? 'fa-volume-mute' : 'fa-volume-up';
+        this.muteBtn.innerHTML = `<i class="fas ${icon}"></i>`;
+        this.volumeIconOverlay.className = `fas ${icon}`;
+    }
+    
+    updateVolumeIcon(volume) {
+        let icon = 'fa-volume-up';
+        if (volume === 0) icon = 'fa-volume-mute';
+        else if (volume < 0.5) icon = 'fa-volume-down';
+        
+        this.volumeIconOverlay.className = `fas ${icon}`;
+        if (!this.video.muted) {
+            this.muteBtn.innerHTML = `<i class="fas ${icon}"></i>`;
         }
     }
     
-    // M3U Playlist Parser
-    async parseM3uFile() {
-        const file = this.m3uFile.files[0];
-        if (!file) {
-            this.showError('Ju lutem zgjidhni një skedar M3U!');
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target.result;
-            this.processM3uContent(content);
-        };
-        reader.readAsText(file);
+    changeVolume(delta) {
+        const currentVolume = this.video.volume * 100;
+        const newVolume = Math.min(100, Math.max(0, currentVolume + delta));
+        this.video.volume = newVolume / 100;
+        this.volumeSliderOverlay.value = newVolume;
+        this.updateVolumeIcon(newVolume / 100);
     }
     
-    async loadM3uFromUrl() {
-        const url = this.m3uUrl.value.trim();
-        if (!url) {
-            this.showError('Ju lutem vendosni një URL!');
-            return;
-        }
-        
-        this.showLoading('Duke ngarkuar playlist...');
-        
-        try {
-            const response = await fetch(url);
-            const content = await response.text();
-            this.processM3uContent(content);
-            this.hideLoading();
-            this.showSuccess('Playlist u ngarkua me sukses!');
-            this.hideModal(this.m3uModal);
-        } catch (error) {
-            console.error('Error loading M3U:', error);
-            this.showError('Gabim në ngarkimin e playlist!');
-            this.hideLoading();
+    retryStream() {
+        if (this.currentChannel) {
+            this.playChannel(this.currentChannel);
         }
     }
     
-    processM3uContent(content) {
-        const lines = content.split('\n');
-        const channels = [];
-        const categories = new Set();
-        let currentChannel = {};
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            if (line.startsWith('#EXTINF:')) {
-                // Parse EXTINF line
-                const match = line.match(/#EXTINF:(-?\d+)\s*(.*?),(.*)/);
-                if (match) {
-                    currentChannel = {
-                        id: channels.length + 1,
-                        duration: parseInt(match[1]),
-                        attributes: this.parseAttributes(match[2]),
-                        name: match[3].trim()
-                    };
-                }
-            } else if (line.startsWith('#EXTGRP:')) {
-                // Parse group/category
-                const group = line.replace('#EXTGRP:', '').trim();
-                currentChannel.category = group;
-                categories.add(group);
-            } else if (line.startsWith('#EXTVLCOPT:')) {
-                // VLC options - skip
-                continue;
-            } else if (line.startsWith('#')) {
-                // Other comments - skip
-                continue;
-            } else if (line && line.length > 0 && !line.startsWith('#')) {
-                // URL line
-                if (currentChannel.name) {
-                    currentChannel.url = line.trim();
-                    currentChannel.logo = currentChannel.attributes['tvg-logo'] || '';
-                    currentChannel.epg_channel_id = currentChannel.attributes['tvg-id'] || '';
-                    
-                    channels.push({...currentChannel});
-                    currentChannel = {};
+    changeQuality(quality) {
+        if (this.hls && this.hls.levels) {
+            if (quality === 'auto') {
+                this.hls.currentLevel = -1;
+            } else {
+                const level = this.hls.levels.findIndex(l => l.height === parseInt(quality));
+                if (level !== -1) {
+                    this.hls.currentLevel = level;
                 }
             }
         }
-        
-        this.channels = channels;
-        this.categories = Array.from(categories).map((cat, index) => ({
-            id: index + 1,
-            name: cat
-        }));
-        
-        this.updateCategories();
-        this.updateChannelCount();
-        this.showSuccess(`U ngarkuan ${channels.length} kanale nga ${this.categories.length} kategori`);
     }
     
-    parseAttributes(attrString) {
-        const attributes = {};
-        const regex = /(\w+)=["']([^"']+)["']/g;
-        let match;
-        
-        while ((match = regex.exec(attrString)) !== null) {
-            attributes[match[1]] = match[2];
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+    
+    // Channel Management
+    playChannel(channel) {
+        if (!channel || !channel.url) {
+            this.showError('Ky kanal nuk ka stream të disponueshëm');
+            return;
         }
         
-        return attributes;
+        this.currentChannel = channel;
+        this.updateChannelUI(channel);
+        this.playStream(channel.url);
     }
     
-    previewM3uFile(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    updateChannelUI(channel) {
+        // Update overlay
+        this.channelNameOverlay.textContent = channel.name;
+        this.programInfoOverlay.textContent = channel.category || 'Live TV';
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target.result;
-            const preview = document.getElementById('previewContent');
-            preview.textContent = content.substring(0, 1000) + 
-                (content.length > 1000 ? '\n\n... (skedari është i gjatë, shfaqen vetëm 1000 karakteret e para)' : '');
-        };
-        reader.readAsText(file);
+        // Update now playing
+        this.nowPlayingChannel.textContent = channel.name;
+        this.nowPlayingProgram.textContent = channel.category || 'Programi aktual';
+        
+        // Update logo
+        if (channel.logo) {
+            this.channelLogoOverlay.src = channel.logo;
+            this.channelLogoNow.src = channel.logo;
+            this.channelLogoOverlay.style.display = 'block';
+            this.channelLogoNow.style.display = 'block';
+        } else {
+            this.channelLogoOverlay.style.display = 'none';
+            this.channelLogoNow.style.display = 'none';
+        }
+        
+        // Update active channel in grid
+        document.querySelectorAll('.channel-card').forEach(card => {
+            card.classList.remove('active');
+            if (parseInt(card.dataset.id) === channel.id) {
+                card.classList.add('active');
+            }
+        });
+        
+        // Update active channel in list
+        document.querySelectorAll('.channel-list-item').forEach(item => {
+            item.classList.remove('active');
+            if (parseInt(item.dataset.id) === channel.id) {
+                item.classList.add('active');
+            }
+        });
     }
     
-    // Load EPG data
-    async loadEpg(serverUrl, username, password) {
+    async playStream(url) {
+        this.showLoading();
+        this.hideError();
+        
+        // Stop previous stream
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
+        }
+        
+        this.video.pause();
+        this.video.src = '';
+        
         try {
-            const epgUrl = `${serverUrl}/xmltv.php?username=${username}&password=${password}`;
-            const response = await fetch(epgUrl);
-            const xmlText = await response.text();
-            
-            // Simple XML parsing for EPG
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-            const programmes = xmlDoc.getElementsByTagName('programme');
-            
-            this.epgData = {};
-            
-            for (let prog of programmes) {
-                const channel = prog.getAttribute('channel');
-                const start = prog.getAttribute('start');
-                const stop = prog.getAttribute('stop');
-                const title = prog.getElementsByTagName('title')[0]?.textContent || '';
-                const desc = prog.getElementsByTagName('desc')[0]?.textContent || '';
-                
-                if (!this.epgData[channel]) {
-                    this.epgData[channel] = [];
-                }
-                
-                this.epgData[channel].push({
-                    start: this.parseEpgTime(start),
-                    end: this.parseEpgTime(stop),
-                    title,
-                    description: desc
+            if (this.settings.playerEngine === 'hls' && Hls.isSupported()) {
+                // Use HLS.js
+                this.hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
                 });
+                
+                this.hls.loadSource(url);
+                this.hls.attachMedia(this.video);
+                
+                this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    if (this.settings.autoPlay) {
+                        this.video.play();
+                    }
+                    this.hideLoading();
+                });
+                
+                this.hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS error:', data);
+                    if (data.fatal) {
+                        this.showError('Gabim fatal në stream');
+                    }
+                });
+            } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS support (Safari)
+                this.video.src = url;
+                if (this.settings.autoPlay) {
+                    await this.video.play();
+                }
+                this.hideLoading();
+            } else {
+                // Try direct play
+                this.video.src = url;
+                if (this.settings.autoPlay) {
+                    await this.video.play();
+                }
+                this.hideLoading();
             }
             
-            console.log('EPG loaded:', Object.keys(this.epgData).length, 'channels');
+            this.currentSource.textContent = 'Stream aktiv';
         } catch (error) {
-            console.warn('Could not load EPG:', error);
+            console.error('Stream error:', error);
+            this.showError('Nuk mund të ngarkojë stream-in');
+            this.hideLoading();
         }
-    }
-    
-    parseEpgTime(epgTime) {
-        // EPG time format: YYYYMMDDHHMMSS +0000
-        const year = epgTime.substring(0, 4);
-        const month = epgTime.substring(4, 6);
-        const day = epgTime.substring(6, 8);
-        const hour = epgTime.substring(8, 10);
-        const minute = epgTime.substring(10, 12);
-        const second = epgTime.substring(12, 14);
-        
-        return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
     }
     
     // UI Updates
+    showLoading() {
+        this.loadingSpinner.style.display = 'block';
+    }
+    
+    hideLoading() {
+        this.loadingSpinner.style.display = 'none';
+    }
+    
+    showError(message) {
+        this.errorMessage.querySelector('h4').textContent = message;
+        this.errorMessage.style.display = 'block';
+    }
+    
+    hideError() {
+        this.errorMessage.style.display = 'none';
+    }
+    
+    updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('sq-AL', { 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        this.currentTimeElement.textContent = timeString;
+    }
+    
+    updateUptime() {
+        const uptimeMs = Date.now() - this.startTime;
+        const hours = Math.floor(uptimeMs / 3600000);
+        const minutes = Math.floor((uptimeMs % 3600000) / 60000);
+        const seconds = Math.floor((uptimeMs % 60000) / 1000);
+        
+        this.uptime.textContent = 
+            `${hours.toString().padStart(2, '0')}:` +
+            `${minutes.toString().padStart(2, '0')}:` +
+            `${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Connection Management
+    switchConnectionType(type) {
+        // Update active button
+        this.typeBtns.forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-type="${type}"]`).classList.add('active');
+        
+        // Show active form
+        this.connectionForms.forEach(form => form.classList.remove('active'));
+        document.getElementById(`${type}Form`).classList.add('active');
+    }
+    
+    connectXtream() {
+        const server = this.xtreamServer.value.trim();
+        const username = this.xtreamUsername.value.trim();
+        const password = this.xtreamPassword.value.trim();
+        
+        if (!server || !username || !password) {
+            alert('Ju lutem plotësoni të gjitha fushat!');
+            return;
+        }
+        
+        // Simulate connection (replace with actual API call)
+        setTimeout(() => {
+            this.loadDemoData(); // For now, load demo data
+            alert('U lidh me sukses! (Demo Mode)');
+        }, 1500);
+    }
+    
+    // Data Loading
+    loadDemoData() {
+        this.categories = [
+            { id: 1, name: "Lajme", count: 15 },
+            { id: 2, name: "Sport", count: 8 },
+            { id: 3, name: "Filma", count: 12 },
+            { id: 4, name: "Muzikë", count: 6 },
+            { id: 5, name: "Dokumentarë", count: 7 },
+            { id: 6, name: "Fëmijë", count: 5 },
+            { id: 7, name: "Informativ", count: 9 },
+            { id: 8, name: "Argëtim", count: 11 }
+        ];
+        
+        this.channels = [
+            { 
+                id: 1, 
+                name: "RTK 1", 
+                category: "Lajme", 
+                logo: "https://via.placeholder.com/150/2196f3/ffffff?text=RTK1",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            },
+            { 
+                id: 2, 
+                name: "RTK 2", 
+                category: "Argëtim", 
+                logo: "https://via.placeholder.com/150/ff4081/ffffff?text=RTK2",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            },
+            { 
+                id: 3, 
+                name: "Klan Kosova", 
+                category: "Lajme", 
+                logo: "https://via.placeholder.com/150/4caf50/ffffff?text=KLN",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            },
+            { 
+                id: 4, 
+                name: "RTV21", 
+                category: "Lajme", 
+                logo: "https://via.placeholder.com/150/ff9800/ffffff?text=RTV21",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            },
+            { 
+                id: 5, 
+                name: "Artmotion", 
+                category: "Muzikë", 
+                logo: "https://via.placeholder.com/150/9c27b0/ffffff?text=ART",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            },
+            { 
+                id: 6, 
+                name: "Discovery", 
+                category: "Dokumentarë", 
+                logo: "https://via.placeholder.com/150/00bcd4/ffffff?text=DS",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            },
+            { 
+                id: 7, 
+                name: "National Geographic", 
+                category: "Dokumentarë", 
+                logo: "https://via.placeholder.com/150/ff5722/ffffff?text=NG",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            },
+            { 
+                id: 8, 
+                name: "EuroSport", 
+                category: "Sport", 
+                logo: "https://via.placeholder.com/150/3f51b5/ffffff?text=ES",
+                url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            }
+        ];
+        
+        // Add more demo channels
+        for (let i = 9; i <= 30; i++) {
+            const category = this.categories[Math.floor(Math.random() * this.categories.length)];
+            this.channels.push({
+                id: i,
+                name: `Kanal ${i}`,
+                category: category.name,
+                logo: `https://via.placeholder.com/150/607d8b/ffffff?text=K${i}`,
+                url: i <= 15 ? "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" : ""
+            });
+        }
+        
+        this.updateCategories();
+        this.updateChannels();
+        this.currentSource.textContent = 'Demo Mode';
+        this.channelsLoaded.textContent = this.channels.length;
+        this.channelsCount.textContent = this.channels.length;
+    }
+    
     updateCategories() {
         this.categoriesList.innerHTML = '';
         
-        // Add "All" category
         const allItem = document.createElement('div');
         allItem.className = 'category-item active';
         allItem.innerHTML = `
@@ -470,512 +633,230 @@ class IptvPlayer {
         allItem.addEventListener('click', () => {
             document.querySelectorAll('.category-item').forEach(item => item.classList.remove('active'));
             allItem.classList.add('active');
-            this.currentCategory = null;
-            this.displayChannels();
+            this.updateChannels();
         });
         this.categoriesList.appendChild(allItem);
         
-        // Add actual categories
         this.categories.forEach(category => {
-            const count = this.channels.filter(c => c.category === category.name).length;
-            if (count === 0) return;
-            
-            const categoryItem = document.createElement('div');
-            categoryItem.className = 'category-item';
-            categoryItem.innerHTML = `
+            const item = document.createElement('div');
+            item.className = 'category-item';
+            item.innerHTML = `
                 <span class="category-name">${category.name}</span>
-                <span class="category-count">${count}</span>
+                <span class="category-count">${category.count}</span>
             `;
-            
-            categoryItem.addEventListener('click', () => {
+            item.addEventListener('click', () => {
                 document.querySelectorAll('.category-item').forEach(item => item.classList.remove('active'));
-                categoryItem.classList.add('active');
-                this.currentCategory = category.name;
-                this.displayChannels();
+                item.classList.add('active');
+                this.filterChannelsByCategory(category.name);
             });
-            
-            this.categoriesList.appendChild(categoryItem);
+            this.categoriesList.appendChild(item);
         });
-        
-        // Display channels for "All" initially
-        this.currentCategory = null;
-        this.displayChannels();
     }
     
-    displayChannels() {
-        this.channelsList.innerHTML = '';
+    updateChannels() {
+        this.channelsGrid.innerHTML = '';
+        this.channelsListView.innerHTML = '';
         
-        let filteredChannels = this.channels;
-        
-        // Filter by category
-        if (this.currentCategory) {
-            filteredChannels = this.channels.filter(c => c.category === this.currentCategory);
-        }
-        
-        // Filter by search
-        const searchTerm = this.searchChannel.value.toLowerCase();
-        if (searchTerm) {
-            filteredChannels = filteredChannels.filter(c => 
-                c.name.toLowerCase().includes(searchTerm) ||
-                (c.attributes && c.attributes['group-title'] && 
-                 c.attributes['group-title'].toLowerCase().includes(searchTerm))
-            );
-        }
-        
-        // Display channels
-        filteredChannels.forEach(channel => {
-            const channelItem = document.createElement('div');
-            channelItem.className = 'channel-item';
-            channelItem.dataset.id = channel.id;
+        this.channels.forEach(channel => {
+            // Grid view
+            const card = document.createElement('div');
+            card.className = 'channel-card';
+            card.dataset.id = channel.id;
             
-            const logoText = channel.logo ? 
-                `<img src="${channel.logo}" alt="${channel.name}" class="channel-logo-img">` :
-                `<span>${channel.name.substring(0, 2).toUpperCase()}</span>`;
-            
-            channelItem.innerHTML = `
-                <div class="channel-logo-small">
-                    ${logoText}
+            card.innerHTML = `
+                <div class="channel-logo-card">
+                    ${channel.logo ? 
+                        `<img src="${channel.logo}" alt="${channel.name}" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\"logo-fallback\">${channel.name.substring(0,2)}</div>'">` :
+                        `<div class="logo-fallback">${channel.name.substring(0,2)}</div>`
+                    }
                 </div>
-                <div class="channel-info-small">
+                <div class="channel-info-card">
                     <h4>${channel.name}</h4>
-                    <p>${channel.category || 'Pa kategori'}</p>
+                    <p>${channel.category}</p>
                 </div>
             `;
             
-            channelItem.addEventListener('click', () => this.playChannel(channel));
-            this.channelsList.appendChild(channelItem);
+            card.addEventListener('click', () => this.playChannel(channel));
+            this.channelsGrid.appendChild(card);
+            
+            // List view
+            const listItem = document.createElement('div');
+            listItem.className = 'channel-list-item';
+            listItem.dataset.id = channel.id;
+            
+            listItem.innerHTML = `
+                <div class="channel-logo-list">
+                    ${channel.logo ? 
+                        `<img src="${channel.logo}" alt="${channel.name}" onerror="this.style.display='none';this.parentElement.innerHTML='<div>${channel.name.substring(0,2)}</div>'">` :
+                        `<div>${channel.name.substring(0,2)}</div>`
+                    }
+                </div>
+                <div>
+                    <h4>${channel.name}</h4>
+                    <p>${channel.category}</p>
+                </div>
+            `;
+            
+            listItem.addEventListener('click', () => this.playChannel(channel));
+            this.channelsListView.appendChild(listItem);
         });
-        
-        this.updateChannelCount();
     }
     
-    updateChannelCount() {
-        let count = this.channels.length;
-        if (this.currentCategory) {
-            count = this.channels.filter(c => c.category === this.currentCategory).length;
-        }
-        this.channelCount.textContent = `${count} kanale`;
-    }
-    
-    searchChannels(term) {
-        this.displayChannels();
-    }
-    
-    // Channel playback
-    async playChannel(channel) {
-        this.currentChannel = channel;
-        
-        // Update UI
-        this.currentChannelName.textContent = channel.name;
-        this.currentProgram.textContent = channel.category || 'Live TV';
-        this.currentLogo.textContent = channel.name.substring(0, 2).toUpperCase();
-        
-        // Update active channel in list
-        document.querySelectorAll('.channel-item').forEach(item => {
-            item.classList.remove('active');
-            if (parseInt(item.dataset.id) === channel.id) {
-                item.classList.add('active');
-            }
-        });
-        
-        // Show loading
-        this.showLoading(`Duke ngarkuar ${channel.name}...`);
-        
-        // Update EPG info
-        this.updateEpgInfo(channel);
-        
-        // Play stream
-        await this.playStream(channel.url);
-    }
-    
-    async playStream(url) {
-        if (!url) {
-            this.showError('Nuk ka URL stream!');
-            return;
-        }
-        
-        // Stop current playback
-        if (this.hls) {
-            this.hls.destroy();
-        }
-        this.videoPlayer.pause();
-        this.videoPlayer.src = '';
-        
-        // Check player type
-        if (this.settings.playerType === 'hls' && typeof Hls !== 'undefined' && Hls.isSupported()) {
-            // Use HLS.js for better compatibility
-            this.hls = new Hls({
-                maxBufferSize: this.settings.bufferSize * 1000,
-                maxBufferLength: this.settings.maxBufferLength,
-                enableWorker: true
-            });
-            
-            this.hls.loadSource(url);
-            this.hls.attachMedia(this.videoPlayer);
-            
-            this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                if (this.settings.autoPlay) {
-                    this.videoPlayer.play().catch(e => {
-                        console.warn('Auto-play failed:', e);
-                    });
-                }
-                this.hideLoading();
-            });
-            
-        } else if (url.endsWith('.m3u8') && this.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-            // Native HLS support (Safari, iOS)
-            this.videoPlayer.src = url;
-            if (this.settings.autoPlay) {
-                this.videoPlayer.play().catch(e => {
-                    console.warn('Auto-play failed:', e);
-                });
-            }
-            this.hideLoading();
-            
-        } else {
-            // Try direct play
-            this.videoPlayer.src = url;
-            if (this.settings.autoPlay) {
-                this.videoPlayer.play().catch(e => {
-                    console.warn('Auto-play failed:', e);
-                });
-            }
-            this.hideLoading();
-        }
-    }
-    
-    updateEpgInfo(channel) {
-        if (!channel.epg_channel_id || !this.epgData[channel.epg_channel_id]) {
-            this.epgTitle.textContent = 'Nuk ka informacion EPG';
-            this.epgDescription.textContent = 'Zgjidhni një kanal për të parë programin';
-            this.epgStart.textContent = '--:--';
-            this.epgEnd.textContent = '--:--';
-            return;
-        }
-        
-        const now = new Date();
-        const programs = this.epgData[channel.epg_channel_id];
-        const currentProgram = programs.find(prog => 
-            prog.start <= now && prog.end >= now
-        );
-        
-        if (currentProgram) {
-            this.epgTitle.textContent = currentProgram.title;
-            this.epgDescription.textContent = currentProgram.description || 'Pa përshkrim';
-            this.epgStart.textContent = currentProgram.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            this.epgEnd.textContent = currentProgram.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        } else {
-            this.epgTitle.textContent = 'Nuk ka program aktual';
-            this.epgDescription.textContent = 'Nuk ka informacion për programin aktual';
-            this.epgStart.textContent = '--:--';
-            this.epgEnd.textContent = '--:--';
-        }
-    }
-    
-    showEpgModal() {
-        if (!this.currentChannel || !this.epgData) {
-            this.showError('Nuk ka të dhëna EPG për të shfaqur');
-            return;
-        }
-        
-        this.showModal(this.epgModal);
-        this.epgGrid.innerHTML = '';
-        
-        // Simple EPG grid implementation
-        const channelId = this.currentChannel.epg_channel_id;
-        if (channelId && this.epgData[channelId]) {
-            const programs = this.epgData[channelId];
-            
-            // Create header
-            const headerCell = document.createElement('div');
-            headerCell.className = 'epg-cell epg-channel-cell';
-            headerCell.textContent = this.currentChannel.name;
-            this.epgGrid.appendChild(headerCell);
-            
-            // Create program cells (simplified - just show next 6 hours)
-            const now = new Date();
-            const endTime = new Date(now.getTime() + 6 * 60 * 60 * 1000);
-            
-            let currentTime = new Date(now);
-            currentTime.setMinutes(0, 0, 0); // Round to current hour
-            
-            while (currentTime < endTime) {
-                const programCell = document.createElement('div');
-                programCell.className = 'epg-cell epg-program-cell';
-                programCell.textContent = currentTime.toLocaleTimeString([], {hour: '2-digit'});
-                this.epgGrid.appendChild(programCell);
-                
-                currentTime.setHours(currentTime.getHours() + 1);
-            }
-        }
-    }
-    
-    // Player controls
-    togglePlayPause() {
-        if (this.videoPlayer.paused) {
-            this.videoPlayer.play();
-        } else {
-            this.videoPlayer.pause();
-        }
-    }
-    
-    prevChannel() {
-        if (!this.currentChannel) return;
-        
-        const currentIndex = this.channels.findIndex(c => c.id === this.currentChannel.id);
-        const prevIndex = (currentIndex - 1 + this.channels.length) % this.channels.length;
-        this.playChannel(this.channels[prevIndex]);
-    }
-    
-    nextChannel() {
-        if (!this.currentChannel) return;
-        
-        const currentIndex = this.channels.findIndex(c => c.id === this.currentChannel.id);
-        const nextIndex = (currentIndex + 1) % this.channels.length;
-        this.playChannel(this.channels[nextIndex]);
-    }
-    
-    setVolume(value) {
-        this.videoPlayer.volume = value / 100;
-        this.volumeIcon.className = value > 50 ? 'fas fa-volume-up' : 
-                                  value > 0 ? 'fas fa-volume-down' : 
-                                  'fas fa-volume-mute';
-    }
-    
-    changeVolume(delta) {
-        const newVolume = Math.min(100, Math.max(0, this.videoPlayer.volume * 100 + delta));
-        this.volumeSlider.value = newVolume;
-        this.setVolume(newVolume);
-    }
-    
-    toggleMute() {
-        this.videoPlayer.muted = !this.videoPlayer.muted;
-        this.volumeIcon.className = this.videoPlayer.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
-    }
-    
-    seek(seconds) {
-        this.videoPlayer.currentTime += seconds;
-    }
-    
-    toggleFullscreen() {
-        const playerContainer = document.querySelector('.player-container');
-        
-        if (!document.fullscreenElement) {
-            if (playerContainer.requestFullscreen) {
-                playerContainer.requestFullscreen();
-            } else if (playerContainer.webkitRequestFullscreen) {
-                playerContainer.webkitRequestFullscreen();
-            } else if (playerContainer.msRequestFullscreen) {
-                playerContainer.msRequestFullscreen();
-            }
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-        }
-    }
-    
-    // Event handlers
-    onPlay() {
-        this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        this.streamStatus.textContent = 'Duke luajtur';
-    }
-    
-    onPause() {
-        this.playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-        this.streamStatus.textContent = 'I pauzuar';
-    }
-    
-    onPlayerError(e) {
-        console.error('Player error:', e);
-        this.showError('Gabim në riprodhim. Duke u rikonektuar...');
-        
-        // Try to recover after 3 seconds
-        setTimeout(() => {
-            if (this.currentChannel) {
-                this.playChannel(this.currentChannel);
-            }
-        }, 3000);
-    }
-    
-    onLoadedMetadata() {
-        const width = this.videoPlayer.videoWidth;
-        const height = this.videoPlayer.videoHeight;
-        this.streamResolution.textContent = `${width}x${height}`;
-    }
-    
-    updateStreamInfo(data) {
-        if (data && data.level && data.level.bitrate) {
-            const bitrate = Math.round(data.level.bitrate / 1000);
-            this.streamBitrate.textContent = `${bitrate} kbps`;
-        }
-    }
-    
-    // Import Xtream Codes (from URL parameters)
-    importXtreamCodes() {
-        const url = prompt('Vendosni URL-në e Xtream Codes (ose string connection):');
-        if (!url) return;
-        
-        // Try to parse Xtream Codes URL
-        if (url.includes('/player_api.php')) {
-            // Full API URL
-            const urlObj = new URL(url);
-            const params = new URLSearchParams(urlObj.search);
-            
-            this.serverUrl.value = `${urlObj.protocol}//${urlObj.host}`;
-            this.username.value = params.get('username') || '';
-            this.password.value = params.get('password') || '';
-            
-            this.showSuccess('Xtream Codes URL u importua! Klikoni Lidhu.');
-            
-        } else if (url.includes(':')) {
-            // Format: server:port:username:password
-            const parts = url.split(':');
-            if (parts.length >= 4) {
-                this.serverUrl.value = `http://${parts[0]}:${parts[1]}`;
-                this.username.value = parts[2];
-                this.password.value = parts[3];
-                this.showSuccess('Xtream Codes u importua! Klikoni Lidhu.');
+    filterCategories(searchTerm) {
+        const items = this.categoriesList.querySelectorAll('.category-item');
+        items.forEach(item => {
+            const name = item.querySelector('.category-name').textContent.toLowerCase();
+            if (name.includes(searchTerm.toLowerCase()) || searchTerm === '') {
+                item.style.display = 'flex';
             } else {
-                this.showError('Format i pavlefshëm! Përdorni: server:port:username:password');
+                item.style.display = 'none';
             }
-        } else {
-            this.showError('URL e pavlefshme!');
+        });
+    }
+    
+    filterChannels(searchTerm) {
+        const cards = this.channelsGrid.querySelectorAll('.channel-card');
+        const listItems = this.channelsListView.querySelectorAll('.channel-list-item');
+        
+        const filter = (elements) => {
+            elements.forEach(el => {
+                const name = el.querySelector('h4').textContent.toLowerCase();
+                const category = el.querySelector('p')?.textContent.toLowerCase() || '';
+                
+                if (name.includes(searchTerm.toLowerCase()) || 
+                    category.includes(searchTerm.toLowerCase()) || 
+                    searchTerm === '') {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+        };
+        
+        filter(cards);
+        filter(listItems);
+    }
+    
+    filterChannelsByCategory(categoryName) {
+        const cards = this.channelsGrid.querySelectorAll('.channel-card');
+        const listItems = this.channelsListView.querySelectorAll('.channel-list-item');
+        
+        const filter = (elements) => {
+            elements.forEach(el => {
+                const category = el.querySelector('p')?.textContent || '';
+                if (categoryName === 'Të gjitha' || category === categoryName) {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+        };
+        
+        filter(cards);
+        filter(listItems);
+    }
+    
+    switchView(view) {
+        this.viewBtns.forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-view="${view}"]`).classList.add('active');
+        
+        if (view === 'grid') {
+            this.channelsGrid.style.display = 'grid';
+            this.channelsListView.style.display = 'none';
+        } else if (view === 'list') {
+            this.channelsGrid.style.display = 'none';
+            this.channelsListView.style.display = 'block';
+        } else if (view === 'favorites') {
+            // Show favorites (to be implemented)
+            this.channelsGrid.style.display = 'grid';
+            this.channelsListView.style.display = 'none';
         }
     }
     
-    // Settings management
+    // Settings Management
+    showSettings() {
+        this.settingsModal.style.display = 'flex';
+    }
+    
+    hideSettings() {
+        this.settingsModal.style.display = 'none';
+    }
+    
     loadSettings() {
         const saved = localStorage.getItem('iptvPlayerSettings');
         if (saved) {
-            this.settings = {...this.settings, ...JSON.parse(saved)};
+            this.settings = JSON.parse(saved);
         }
         
-        // Apply settings to UI
-        this.playerType.value = this.settings.playerType;
+        // Apply to UI
+        this.playerEngine.value = this.settings.playerEngine;
         this.defaultQuality.value = this.settings.defaultQuality;
-        this.autoPlayCheck.checked = this.settings.autoPlay;
-        this.bufferSize.value = this.settings.bufferSize;
-        this.maxBufferLength.value = this.settings.maxBufferLength;
-        this.bufferValue.textContent = this.settings.bufferSize + 's';
-        this.maxBufferValue.textContent = this.settings.maxBufferLength + 's';
+        this.autoPlay.checked = this.settings.autoPlay;
+        this.autoNext.checked = this.settings.autoNext;
+        this.rememberVolume.checked = this.settings.rememberVolume;
+        
+        // Apply volume memory
+        if (this.settings.rememberVolume) {
+            const savedVolume = localStorage.getItem('playerVolume');
+            if (savedVolume) {
+                const volume = parseFloat(savedVolume);
+                this.video.volume = volume;
+                this.volumeSliderOverlay.value = volume * 100;
+                this.updateVolumeIcon(volume);
+            }
+        }
     }
     
     saveSettings() {
         this.settings = {
-            playerType: this.playerType.value,
+            playerEngine: this.playerEngine.value,
             defaultQuality: this.defaultQuality.value,
-            autoPlay: this.autoPlayCheck.checked,
-            bufferSize: parseInt(this.bufferSize.value),
-            maxBufferLength: parseInt(this.maxBufferLength.value)
+            autoPlay: this.autoPlay.checked,
+            autoNext: this.autoNext.checked,
+            rememberVolume: this.rememberVolume.checked
         };
         
         localStorage.setItem('iptvPlayerSettings', JSON.stringify(this.settings));
-        this.showSuccess('Cilësimet u ruajtën!');
-        this.hideModal(this.settingsModal);
-    }
-    
-    switchTab(button) {
-        // Update active tab
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
         
-        // Show corresponding content
-        const tabId = button.dataset.tab + 'Tab';
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.style.display = 'none';
-        });
-        document.getElementById(tabId).style.display = 'block';
+        // Save volume
+        if (this.settings.rememberVolume) {
+            localStorage.setItem('playerVolume', this.video.volume.toString());
+        }
+        
+        this.hideSettings();
+        alert('Cilësimet u ruajtën!');
     }
     
-    // Utility methods
-    showModal(modal) {
-        modal.style.display = 'flex';
-    }
-    
-    hideModal(modal) {
-        modal.style.display = 'none';
-    }
-    
-    showM3uModal() {
-        this.showModal(this.m3uModal);
-    }
-    
-    showLoading(message) {
-        this.loadingIndicator.style.display = 'block';
-        if (message) {
-            this.loadingIndicator.querySelector('p').textContent = message;
+    resetSettings() {
+        if (confirm('Jeni i sigurt që dëshironi të rivendosni cilësimet?')) {
+            localStorage.removeItem('iptvPlayerSettings');
+            localStorage.removeItem('playerVolume');
+            this.settings = {
+                playerEngine: 'hls',
+                defaultQuality: '720',
+                autoPlay: true,
+                autoNext: false,
+                rememberVolume: true
+            };
+            
+            this.loadSettings();
+            alert('Cilësimet u rivendosën!');
         }
     }
     
-    hideLoading() {
-        this.loadingIndicator.style.display = 'none';
+    loadFavorites() {
+        const saved = localStorage.getItem('iptvFavorites');
+        if (saved) {
+            this.favorites = new Set(JSON.parse(saved));
+        }
     }
     
-    showError(message) {
-        alert(`Gabim: ${message}`);
-    }
-    
-    showSuccess(message) {
-        // You could replace this with a toast notification
-        console.log('Success:', message);
+    saveFavorites() {
+        localStorage.setItem('iptvFavorites', JSON.stringify([...this.favorites]));
     }
 }
 
 // Initialize player when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    window.iptvPlayer = new IptvPlayer();
-    
-    // Try to load demo M3U on startup (optional)
-    // You can uncomment this to load a demo playlist
-    /*
-    setTimeout(() => {
-        const demoM3u = `#EXTM3U
-#EXTINF:-1 tvg-id="rtk1.al" tvg-name="RTK 1" tvg-logo="https://example.com/rtk1.png" group-title="News",RTK 1
-http://example.com/stream1.m3u8
-#EXTINF:-1 tvg-id="rtk2.al" tvg-name="RTK 2" tvg-logo="https://example.com/rtk2.png" group-title="Entertainment",RTK 2
-http://example.com/stream2.m3u8
-#EXTINF:-1 tvg-id="klankosova.al" tvg-name="Klan Kosova" tvg-logo="https://example.com/klankosova.png" group-title="General",Klan Kosova
-http://example.com/stream3.m3u8`;
-        
-        window.iptvPlayer.processM3uContent(demoM3u);
-    }, 1000);
-    */
+    window.player = new IptvPlayerPro();
 });
-
-// Add this CSS for channel logos
-const style = document.createElement('style');
-style.textContent = `
-.channel-logo-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 6px;
-}
-
-.epg-grid {
-    display: grid;
-    grid-template-columns: auto repeat(24, 1fr);
-    gap: 1px;
-    background: #333;
-}
-
-.epg-cell {
-    padding: 8px;
-    background: #1a1a1a;
-    min-height: 60px;
-    border-bottom: 1px solid #333;
-}
-
-.epg-channel-cell {
-    background: #121212;
-    position: sticky;
-    left: 0;
-    z-index: 2;
-}
-`;
-document.head.appendChild(style);
