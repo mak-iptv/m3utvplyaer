@@ -3,226 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTV Player - Smart TV</title>
+    <title>IPTV Player - Provider</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 <body class="dark-theme">
     <!-- Loading Screen -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loader">
             <div class="logo-animation">
-                <i class="fas fa-tv"></i>
+                <i class="fas fa-satellite-dish"></i>
             </div>
             <h2>IPTV Player</h2>
-            <p>Duke ngarkuar...</p>
+            <p>Duke u inicializuar...</p>
         </div>
     </div>
 
     <!-- Main Container -->
     <div class="main-container">
-        <!-- Left Sidebar - Kanalet -->
+        <!-- Left Sidebar - Login & Kanalet -->
         <div class="sidebar left-sidebar">
-            <!-- Header Sidebar -->
-            <div class="sidebar-header">
-                <div class="user-info">
-                    <div class="avatar">
-                        <i class="fas fa-user"></i>
+            <!-- Login Form -->
+            <div class="login-container" id="loginContainer">
+                <div class="login-header">
+                    <h2><i class="fas fa-sign-in-alt"></i> Lidhja me Provider</h2>
+                    <p>Vendos të dhënat e providerit tuaj IPTV</p>
+                </div>
+                
+                <div class="login-form">
+                    <div class="form-group">
+                        <label for="server_url">
+                            <i class="fas fa-server"></i> Server URL
+                        </label>
+                        <input type="text" id="server_url" 
+                               placeholder="http://server-iptv.com:8080"
+                               value="">
+                        <div class="form-hint">P.sh: http://server.iptv.com:8080</div>
                     </div>
-                    <div class="user-details">
-                        <span class="username" id="username">Përdorues</span>
-                        <span class="status connected" id="connectionStatus">
-                            <i class="fas fa-circle"></i> I lidhur
-                        </span>
-                    </div>
-                </div>
-                <div class="sidebar-controls">
-                    <button class="icon-btn" id="refreshBtn" title="Rifresko">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                    <button class="icon-btn" id="searchToggleBtn" title="Kërko">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="search-container" id="searchContainer" style="display: none;">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="channelSearch" placeholder="Kërko kanal...">
-                    <button class="clear-search" id="clearSearch">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Live TV & VOD Tabs -->
-            <div class="content-tabs">
-                <button class="tab-btn active" data-tab="live">
-                    <i class="fas fa-satellite-dish"></i>
-                    <span>Live TV</span>
-                </button>
-                <button class="tab-btn" data-tab="movies">
-                    <i class="fas fa-film"></i>
-                    <span>Filma</span>
-                </button>
-                <button class="tab-btn" data-tab="series">
-                    <i class="fas fa-tv"></i>
-                    <span>Seria</span>
-                </button>
-            </div>
-
-            <!-- Categories -->
-            <div class="categories-section">
-                <div class="section-title">
-                    <h3><i class="fas fa-layer-group"></i> Kategoritë</h3>
-                </div>
-                <div class="categories-list" id="categoriesList">
-                    <!-- Kategoritë do të shfaqen këtu -->
-                </div>
-            </div>
-
-            <!-- Channels List -->
-            <div class="channels-section">
-                <div class="section-title">
-                    <h3><i class="fas fa-list"></i> Kanalet</h3>
-                    <span class="counter" id="channelsCount">0</span>
-                </div>
-                <div class="channels-list" id="channelsList">
-                    <!-- Kanalet do të shfaqen këtu -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Content - Player & Info -->
-        <div class="main-content">
-            <!-- Player Container -->
-            <div class="player-container">
-                <div class="video-wrapper">
-                    <video id="videoPlayer" controls autoplay playsinline>
-                        Ju lutem përdorni një shfletues që mbështet HTML5 video
-                    </video>
                     
-                    <!-- Player Overlay Controls -->
-                    <div class="player-overlay">
-                        <!-- Top Bar -->
-                        <div class="player-top-bar">
-                            <div class="channel-info-mini">
-                                <span class="channel-logo-mini">
-                                    <i class="fas fa-tv"></i>
-                                </span>
-                                <div>
-                                    <h3 id="currentChannelName">Zgjidhni një kanal</h3>
-                                    <p id="currentProgram">Programi aktual</p>
-                                </div>
-                            </div>
-                            <div class="player-actions">
-                                <button class="player-btn" id="volumeControl">
-                                    <i class="fas fa-volume-up"></i>
-                                </button>
-                                <button class="player-btn" id="fullscreenBtn">
-                                    <i class="fas fa-expand"></i>
-                                </button>
-                                <button class="player-btn" id="settingsBtn">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="username">
+                            <i class="fas fa-user"></i> Përdoruesi
+                        </label>
+                        <input type="text" id="username" 
+                               placeholder="Përdoruesi"
+                               value="">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">
+                            <i class="fas fa-lock"></i> Fjalëkalimi
+                        </label>
+                        <input type="password" id="password" 
+                               placeholder="Fjalëkalimi"
+                               value="">
+                    </div>
+                    
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="remember" checked>
+                            <span>Mbaj mend të dhënat</span>
+                        </label>
+                        <button class="btn-link" id="loadFromStorage">
+                            <i class="fas fa-history"></i> Ngarko të dhëna të ruajtura
+                        </button>
+                    </div>
+                    
+                    <div class="login-buttons">
+                        <button class="btn btn-primary btn-block" id="connectBtn">
+                            <i class="fas fa-plug"></i> Lidhu me Provider
+                        </button>
+                        <button class="btn btn-secondary btn-block" id="testConnectionBtn">
+                            <i class="fas fa-wifi"></i> Testo Lidhjen
+                        </button>
+                    </div>
+                    
+                    <div class="connection-status" id="connectionStatus">
+                        <div class="status-indicator disconnected"></div>
+                        <span>Jo i lidhur</span>
+                    </div>
+                </div>
+            </div>
 
-                        <!-- Bottom Bar -->
-                        <div class="player-bottom-bar">
-                            <div class="playback-controls">
-                                <button class="control-btn" id="rewindBtn">
-                                    <i class="fas fa-backward"></i>
-                                    <span>10s</span>
-                                </button>
-                                <button class="control-btn" id="playPauseBtn">
-                                    <i class="fas fa-play"></i>
-                                </button>
-                                <button class="control-btn" id="forwardBtn">
-                                    <i class="fas fa-forward"></i>
-                                    <span>10s</span>
-                                </button>
-                            </div>
-                            <div class="progress-container">
-                                <div class="time-current" id="currentTime">00:00</div>
-                                <input type="range" id="progressBar" class="progress-bar" min="0" max="100" value="0">
-                                <div class="time-total" id="totalTime">00:00</div>
-                            </div>
+            <!-- Channels Container (hidden by default) -->
+            <div class="channels-container" id="channelsContainer" style="display: none;">
+                <!-- Header -->
+                <div class="channels-header">
+                    <div class="user-info">
+                        <div class="avatar">
+                            <i class="fas fa-user"></i>
                         </div>
-
-                        <!-- Volume Slider -->
-                        <div class="volume-slider-container" id="volumeSliderContainer">
-                            <input type="range" id="volumeSlider" min="0" max="100" value="50">
-                            <div class="volume-value" id="volumeValue">50%</div>
+                        <div class="user-details">
+                            <span class="username" id="displayUsername">Provider</span>
+                            <span class="server-url" id="displayServerUrl">server.com</span>
                         </div>
                     </div>
+                    <div class="header-actions">
+                        <button class="icon-btn" id="logoutBtn" title="Dil">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                        <button class="icon-btn" id="refreshDataBtn" title="Rifresko">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
 
-                    <!-- Channel Info Banner -->
-                    <div class="channel-banner" id="channelBanner">
-                        <div class="banner-content">
-                            <div class="channel-logo-banner">
-                                <img id="bannerLogo" src="" alt="">
-                            </div>
-                            <div class="channel-details">
-                                <h2 id="bannerChannelName">Zgjidhni kanal</h2>
-                                <p id="bannerProgramInfo">Programi aktual do të shfaqet këtu</p>
-                                <div class="program-time">
-                                    <span id="bannerTime">19:00 - 20:30</span>
-                                    <span class="live-badge">
-                                        <i class="fas fa-circle"></i> LIVE
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="close-banner" id="closeBanner">
+                <!-- Content Type Tabs -->
+                <div class="content-tabs">
+                    <button class="tab-btn active" data-type="live">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span>Live TV</span>
+                    </button>
+                    <button class="tab-btn" data-type="movies">
+                        <i class="fas fa-film"></i>
+                        <span>Filma</span>
+                    </button>
+                    <button class="tab-btn" data-type="series">
+                        <i class="fas fa-tv"></i>
+                        <span>Seria</span>
+                    </button>
+                </div>
+
+                <!-- Search Box -->
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Kërko kanal...">
+                        <button class="clear-search" id="clearSearchBtn">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
 
+                <!-- Categories -->
+                <div class="categories-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-layer-group"></i> Kategoritë</h3>
+                        <span class="counter" id="categoriesCount">0</span>
+                    </div>
+                    <div class="categories-list" id="categoriesList">
+                        <!-- Kategoritë do të shfaqen këtu -->
+                    </div>
+                </div>
+
+                <!-- Channels -->
+                <div class="channels-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-list"></i> Kanalet</h3>
+                        <span class="counter" id="channelsCount">0</span>
+                    </div>
+                    <div class="channels-list" id="channelsList">
+                        <!-- Kanalet do të shfaqen këtu -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Player Area -->
+        <div class="player-main">
+            <!-- Player -->
+            <div class="player-container">
+                <div class="video-wrapper" id="videoWrapper">
+                    <video id="videoPlayer" controls autoplay playsinline>
+                        Shfletuesi juaj nuk mbështet video HLS.
+                    </video>
+                    
+                    <!-- Player Overlay -->
+                    <div class="player-overlay">
+                        <!-- Channel Info -->
+                        <div class="channel-info-overlay">
+                            <div class="channel-logo-overlay">
+                                <img id="channelLogoOverlay" src="" alt="" onerror="this.style.display='none'">
+                            </div>
+                            <div class="channel-details-overlay">
+                                <h2 id="channelNameOverlay">Zgjidhni një kanal</h2>
+                                <p id="programInfoOverlay">Programi aktual do të shfaqet këtu</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Player Controls -->
+                        <div class="player-controls-overlay">
+                            <div class="controls-left">
+                                <button class="player-control-btn" id="playPauseBtn">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button class="player-control-btn" id="rewind10Btn">
+                                    <i class="fas fa-backward"></i>
+                                    <span>10s</span>
+                                </button>
+                                <button class="player-control-btn" id="forward10Btn">
+                                    <i class="fas fa-forward"></i>
+                                    <span>10s</span>
+                                </button>
+                            </div>
+                            
+                            <div class="controls-center">
+                                <span class="time-current" id="currentTime">00:00</span>
+                                <input type="range" id="progressBar" class="progress-bar" min="0" max="100" value="0">
+                                <span class="time-total" id="totalTime">00:00</span>
+                            </div>
+                            
+                            <div class="controls-right">
+                                <button class="player-control-btn" id="volumeBtn">
+                                    <i class="fas fa-volume-up"></i>
+                                </button>
+                                <div class="volume-slider-container" id="volumeSliderContainer">
+                                    <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                                </div>
+                                <button class="player-control-btn" id="fullscreenBtn">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                                <button class="player-control-btn" id="playerSettingsBtn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- EPG Section -->
-                <div class="epg-container">
+                <div class="epg-container" id="epgContainer">
                     <div class="epg-header">
                         <h3><i class="fas fa-tv"></i> Programi - Sot</h3>
-                        <div class="epg-nav">
-                            <button class="epg-nav-btn" id="prevEpg">
-                                <i class="fas fa-chevron-left"></i>
+                        <div class="epg-actions">
+                            <button class="epg-action-btn" id="prevDayBtn">
+                                <i class="fas fa-chevron-left"></i> Dita paraprake
                             </button>
                             <span class="epg-date" id="epgDate">23 Shkurt 2024</span>
-                            <button class="epg-nav-btn" id="nextEpg">
-                                <i class="fas fa-chevron-right"></i>
+                            <button class="epg-action-btn" id="nextDayBtn">
+                                Dita tjetër <i class="fas fa-chevron-right"></i>
                             </button>
                         </div>
                     </div>
                     <div class="epg-timeline" id="epgTimeline">
-                        <!-- EPG do të shfaqet këtu -->
+                        <div class="no-epg-message">
+                            <i class="fas fa-tv"></i>
+                            <p>Zgjidhni një kanal për të parë programin</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Sidebar - Info & Settings -->
+            <!-- Right Sidebar - Info & Favorites -->
             <div class="sidebar right-sidebar">
                 <!-- Now Playing -->
                 <div class="now-playing-section">
-                    <div class="section-title">
+                    <div class="section-header">
                         <h3><i class="fas fa-play-circle"></i> Po luhet</h3>
                     </div>
                     <div class="now-playing-card" id="nowPlayingCard">
                         <div class="np-channel-logo">
-                            <i class="fas fa-tv"></i>
+                            <i class="fas fa-tv" id="npChannelLogoIcon"></i>
+                            <img id="npChannelLogo" src="" alt="" onerror="this.style.display='none'">
                         </div>
                         <div class="np-details">
                             <h4 id="npChannelName">Zgjidhni kanal</h4>
-                            <p id="npProgramName">Programi aktual</p>
+                            <p id="npProgramName">-</p>
                             <div class="np-progress">
                                 <div class="np-progress-bar">
                                     <div class="np-progress-fill" id="npProgressFill"></div>
                                 </div>
                                 <div class="np-time">
-                                    <span id="npCurrentTime">19:00</span>
-                                    <span id="npEndTime">20:30</span>
+                                    <span id="npCurrentTime">-</span>
+                                    <span id="npEndTime">-</span>
                                 </div>
                             </div>
                         </div>
@@ -231,130 +275,67 @@
 
                 <!-- Channel Info -->
                 <div class="channel-info-section">
-                    <div class="section-title">
+                    <div class="section-header">
                         <h3><i class="fas fa-info-circle"></i> Informacion</h3>
                     </div>
                     <div class="info-card">
                         <div class="info-item">
-                            <span class="info-label"><i class="fas fa-hashtag"></i> Numri:</span>
-                            <span class="info-value" id="infoChannelNumber">101</span>
+                            <span class="info-label">Kategoria:</span>
+                            <span class="info-value" id="infoCategory">-</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label"><i class="fas fa-layer-group"></i> Kategoria:</span>
-                            <span class="info-value" id="infoCategory">Lajme</span>
+                            <span class="info-label">Numri:</span>
+                            <span class="info-value" id="infoChannelNumber">-</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label"><i class="fas fa-language"></i> Gjuha:</span>
-                            <span class="info-value" id="infoLanguage">Shqip</span>
+                            <span class="info-label">Cilësia:</span>
+                            <span class="info-value" id="infoQuality">-</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label"><i class="fas fa-eye"></i> Rezolucioni:</span>
-                            <span class="info-value" id="infoResolution">HD</span>
+                            <span class="info-label">Gjuha:</span>
+                            <span class="info-value" id="infoLanguage">-</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Quick Actions -->
-                <div class="quick-actions-section">
-                    <div class="section-title">
-                        <h3><i class="fas fa-bolt"></i> Veprime të shpejta</h3>
+                <!-- Favorites -->
+                <div class="favorites-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-heart"></i> Favorites</h3>
+                        <button class="icon-btn-small" id="clearFavoritesBtn" title="Pastro të gjitha">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
-                    <div class="actions-grid">
-                        <button class="action-btn" id="favoritesBtn">
-                            <i class="fas fa-heart"></i>
-                            <span>Favorites</span>
-                        </button>
-                        <button class="action-btn" id="recordBtn">
-                            <i class="fas fa-record-vinyl"></i>
-                            <span>Regjistro</span>
-                        </button>
-                        <button class="action-btn" id="screenshotBtn">
-                            <i class="fas fa-camera"></i>
-                            <span>Foto</span>
-                        </button>
-                        <button class="action-btn" id="infoBtn">
-                            <i class="fas fa-info"></i>
-                            <span>Info</span>
-                        </button>
+                    <div class="favorites-list" id="favoritesList">
+                        <div class="empty-favorites">
+                            <i class="far fa-heart"></i>
+                            <p>Shtoni kanale te preferuara</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Server Status -->
-                <div class="status-section">
-                    <div class="section-title">
-                        <h3><i class="fas fa-server"></i> Statusi i Serverit</h3>
+                <div class="server-status-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-server"></i> Statusi</h3>
                     </div>
                     <div class="status-card">
                         <div class="status-item">
-                            <span class="status-label">Përgjigje:</span>
-                            <span class="status-value good" id="serverPing">45ms</span>
+                            <span class="status-label">Statusi:</span>
+                            <span class="status-value" id="serverStatus">Jo i lidhur</span>
                         </div>
                         <div class="status-item">
-                            <span class="status-label">Shpejtësia:</span>
-                            <span class="status-value good" id="serverSpeed">25 Mbps</span>
+                            <span class="status-label">Kanalet:</span>
+                            <span class="status-value" id="totalChannels">0</span>
                         </div>
                         <div class="status-item">
                             <span class="status-label">Buffer:</span>
                             <span class="status-value" id="bufferStatus">0%</span>
                         </div>
                         <div class="status-item">
-                            <span class="status-label">Kanalet:</span>
-                            <span class="status-value" id="totalChannels">150</span>
+                            <span class="status-label">Koha:</span>
+                            <span class="status-value" id="serverTime">00:00</span>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Login Modal -->
-    <div class="modal" id="loginModal">
-        <div class="modal-content login-modal">
-            <div class="modal-header">
-                <h2><i class="fas fa-sign-in-alt"></i> Lidhja me IPTV</h2>
-                <button class="close-modal" id="closeLoginModal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="login-form">
-                    <div class="form-group">
-                        <label for="serverUrl">
-                            <i class="fas fa-server"></i> Server URL
-                        </label>
-                        <input type="text" id="serverUrl" 
-                               placeholder="http://server-iptv.com:8080"
-                               value="http://example.com:8080">
-                    </div>
-                    <div class="form-group">
-                        <label for="serverUsername">
-                            <i class="fas fa-user"></i> Përdoruesi
-                        </label>
-                        <input type="text" id="serverUsername" 
-                               placeholder="Përdoruesi"
-                               value="demo">
-                    </div>
-                    <div class="form-group">
-                        <label for="serverPassword">
-                            <i class="fas fa-lock"></i> Fjalëkalimi
-                        </label>
-                        <input type="password" id="serverPassword" 
-                               placeholder="Fjalëkalimi"
-                               value="demo123">
-                    </div>
-                    <div class="form-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="rememberMe" checked>
-                            <span>Mbaj mend mua</span>
-                        </label>
-                        <a href="#" class="forgot-link">Harruat fjalëkalimin?</a>
-                    </div>
-                    <button class="btn btn-primary btn-block" id="connectServerBtn">
-                        <i class="fas fa-plug"></i> Lidhu me Server
-                    </button>
-                    <div class="demo-note">
-                        <i class="fas fa-info-circle"></i>
-                        Për testim, përdorni kredenciale demo ose vendosni të dhënat tuaja
                     </div>
                 </div>
             </div>
@@ -363,19 +344,19 @@
 
     <!-- Settings Modal -->
     <div class="modal" id="settingsModal">
-        <div class="modal-content settings-modal">
+        <div class="modal-content">
             <div class="modal-header">
-                <h2><i class="fas fa-cog"></i> Cilësimet</h2>
+                <h2><i class="fas fa-cog"></i> Cilësimet e Playerit</h2>
                 <button class="close-modal" id="closeSettingsModal">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+            
             <div class="modal-body">
                 <div class="settings-tabs">
                     <button class="settings-tab active" data-tab="player">Player</button>
-                    <button class="settings-tab" data-tab="playback">Playback</button>
+                    <button class="settings-tab" data-tab="provider">Provider</button>
                     <button class="settings-tab" data-tab="interface">Ndërfaqja</button>
-                    <button class="settings-tab" data-tab="server">Server</button>
                 </div>
                 
                 <div class="settings-content">
@@ -385,83 +366,85 @@
                             <label for="videoQuality">Cilësia Video:</label>
                             <select id="videoQuality">
                                 <option value="auto">Automatike</option>
-                                <option value="1080p">1080p</option>
-                                <option value="720p">720p</option>
-                                <option value="480p">480p</option>
+                                <option value="1080">1080p</option>
+                                <option value="720">720p</option>
+                                <option value="480">480p</option>
+                                <option value="360">360p</option>
                             </select>
                         </div>
+                        
                         <div class="setting-item">
-                            <label for="bufferSize">Madhësia e Buffer-it (MB):</label>
+                            <label for="bufferSize">Buffer Size (MB):</label>
                             <input type="range" id="bufferSize" min="10" max="100" value="50">
-                            <span id="bufferSizeValue">50 MB</span>
+                            <span class="setting-value" id="bufferSizeValue">50 MB</span>
                         </div>
+                        
                         <div class="setting-item">
-                            <label>
+                            <label class="checkbox-setting">
                                 <input type="checkbox" id="autoPlay" checked>
                                 <span>Auto-play kanal tjetër</span>
                             </label>
                         </div>
+                        
                         <div class="setting-item">
-                            <label>
+                            <label class="checkbox-setting">
                                 <input type="checkbox" id="hardwareAcceleration" checked>
                                 <span>Përshpejtimi Hardware</span>
                             </label>
                         </div>
                     </div>
-
-                    <!-- Playback Settings -->
-                    <div class="settings-pane" id="playbackSettings">
+                    
+                    <!-- Provider Settings -->
+                    <div class="settings-pane" id="providerSettings">
                         <div class="setting-item">
-                            <label for="rewindTime">Kohë prapa (sekonda):</label>
-                            <input type="number" id="rewindTime" min="5" max="60" value="10">
+                            <label for="timeout">Timeout (sekonda):</label>
+                            <input type="number" id="timeout" min="5" max="60" value="30">
                         </div>
+                        
                         <div class="setting-item">
-                            <label for="forwardTime">Kohë përpara (sekonda):</label>
-                            <input type="number" id="forwardTime" min="5" max="60" value="10">
+                            <label class="checkbox-setting">
+                                <input type="checkbox" id="autoReconnect" checked>
+                                <span>Rilidhu automatikisht</span>
+                            </label>
                         </div>
+                        
                         <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="rememberPosition" checked>
-                                <span>Mbaj mend pozitën</span>
+                            <label class="checkbox-setting">
+                                <input type="checkbox" id="cacheChannels" checked>
+                                <span>Cache kanalet</span>
+                            </label>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label class="checkbox-setting">
+                                <input type="checkbox" id="loadEPG" checked>
+                                <span>Ngarko EPG</span>
                             </label>
                         </div>
                     </div>
-
+                    
                     <!-- Interface Settings -->
                     <div class="settings-pane" id="interfaceSettings">
                         <div class="setting-item">
-                            <label for="themeSelect">Tema:</label>
-                            <select id="themeSelect">
+                            <label for="theme">Tema:</label>
+                            <select id="theme">
                                 <option value="dark">E errët</option>
                                 <option value="light">E çelët</option>
                                 <option value="blue">Blu</option>
                             </select>
                         </div>
+                        
                         <div class="setting-item">
-                            <label for="languageSelect">Gjuha:</label>
-                            <select id="languageSelect">
-                                <option value="sq">Shqip</option>
-                                <option value="en">Anglisht</option>
-                            </select>
-                        </div>
-                        <div class="setting-item">
-                            <label>
+                            <label class="checkbox-setting">
                                 <input type="checkbox" id="showChannelNumbers" checked>
                                 <span>Shfaq numrat e kanaleve</span>
                             </label>
                         </div>
-                    </div>
-
-                    <!-- Server Settings -->
-                    <div class="settings-pane" id="serverSettings">
+                        
                         <div class="setting-item">
-                            <label for="timeoutDuration">Timeout (sekonda):</label>
-                            <input type="number" id="timeoutDuration" min="5" max="60" value="30">
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="autoReconnect" checked>
-                                <span>Rilidhu automatikisht</span>
+                            <label class="checkbox-setting">
+                                <input type="checkbox" id="showChannelLogos" checked>
+                                <span>Shfaq logo kanalesh</span>
                             </label>
                         </div>
                     </div>
@@ -472,8 +455,25 @@
                         <i class="fas fa-undo"></i> Rivendos
                     </button>
                     <button class="btn btn-primary" id="saveSettingsBtn">
-                        <i class="fas fa-save"></i> Ruaj
+                        <i class="fas fa-save"></i> Ruaj Cilësimet
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EPG Detail Modal -->
+    <div class="modal" id="epgDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-tv"></i> Detajet e Programit</h2>
+                <button class="close-modal" id="closeEpgModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="epg-detail-content" id="epgDetailContent">
+                    <!-- EPG details will be loaded here -->
                 </div>
             </div>
         </div>
@@ -494,7 +494,7 @@
                 <i class="fas fa-tv"></i>
             </div>
             <div class="notification-info">
-                <h4 id="notificationChannel">Kanal i ri</h4>
+                <h4 id="notificationChannelName">Kanal i ri</h4>
                 <p id="notificationProgram">Programi aktual</p>
             </div>
         </div>
@@ -502,6 +502,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="script.js"></script>
 </body>
 </html>
