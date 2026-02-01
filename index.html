@@ -143,7 +143,51 @@
                             <span class="meta-item" id="currentUrl">-</span>
                         </div>
                     </div>
-                    
+                    <!-- Switching Overlay -->
+<div class="switching-overlay" id="switchingOverlay">
+    <div class="switching-content">
+        <div class="switching-spinner"></div>
+        <div class="switching-text" id="switchingText">Switching channel...</div>
+    </div>
+</div>
+
+<!-- Channel Switch Notification -->
+<div class="channel-switch-notification" id="channelSwitchNotification">
+    <div class="notification-content">
+        <strong id="notificationTitle">Channel Switched</strong>
+        <div id="notificationMessage"></div>
+    </div>
+</div>
+
+<!-- History Panel (optional) -->
+<div class="history-panel" id="historyPanel">
+    <h4>
+        <span>Recent Channels</span>
+        <button class="btn-small" onclick="document.getElementById('historyPanel').style.display='none'">×</button>
+    </h4>
+    <div class="history-list" id="historyList"></div>
+</div>
+
+<!-- Keyboard Shortcuts Help -->
+<div class="shortcuts-help" id="shortcutsHelp">
+    <h4>Keyboard Shortcuts</h4>
+    <div class="shortcut-item">
+        <span class="shortcut-key">← →</span>
+        <span class="shortcut-description">Previous/Next Channel</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">Space</span>
+        <span class="shortcut-description">Play/Pause</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">Ctrl + R</span>
+        <span class="shortcut-description">Retry Channel</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">H</span>
+        <span class="shortcut-description">Show History</span>
+    </div>
+</div>
                     <div class="quality-controls">
                         <select id="qualitySelect">
                             <option value="">Auto Quality</option>
