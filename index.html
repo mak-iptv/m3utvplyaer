@@ -4,454 +4,124 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IPTV Player Pro</title>
+
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Shto këto stile -->
-<style>
-    /* Toast notifications */
-    .toast-notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #4caf50;
-        color: white;
-        padding: 15px 25px;
-        border-radius: 8px;
-        z-index: 10000;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        animation: slideIn 0.3s ease;
-    }
-    
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
+
+    <style>
+        .toast-notification{
+            position:fixed;top:20px;right:20px;
+            background:#4caf50;color:#fff;
+            padding:14px 22px;border-radius:8px;
+            z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3)
         }
-        to {
-            transform: translateX(0);
-            opacity: 1;
+        .file-upload input{display:none}
+        .file-upload label{
+            display:block;padding:12px;
+            border:2px dashed rgba(255,255,255,.2);
+            border-radius:8px;text-align:center;
+            cursor:pointer
         }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-    
-    /* M3U file upload improvements */
-    .file-upload {
-        position: relative;
-        margin: 10px 0;
-    }
-    
-    .file-upload input[type="file"] {
-        display: none;
-    }
-    
-    .file-upload label {
-        display: block;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 2px dashed rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        color: rgba(255, 255, 255, 0.7);
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    
-    .file-upload label:hover {
-        border-color: #2196f3;
-        color: #2196f3;
-        background: rgba(33, 150, 243, 0.1);
-    }
-    
-    .file-upload i {
-        margin-right: 8px;
-    }
-</style>
+    </style>
 </head>
+
 <body>
-    <div class="app-container">
-        <!-- Top Header -->
-        <header class="main-header">
-            <div class="logo-section">
-                <div class="logo">
-                    <i class="fas fa-tv"></i>
-                    <span>IPTV<span class="logo-highlight">PRO</span></span>
-                </div>
-                <div class="header-info">
-                    <span class="status online">
-                        <i class="fas fa-circle"></i> Online
-                    </span>
-                    <span class="time" id="currentTime">00:00:00</span>
-                </div>
-            </div>
-            
-            <div class="player-controls-top">
-                <button class="icon-btn" id="muteBtn" title="Mute">
-                    <i class="fas fa-volume-up"></i>
-                </button>
-                <button class="icon-btn" id="aspectBtn" title="Aspect Ratio">
-                    <i class="fas fa-expand-alt"></i>
-                </button>
-                <button class="icon-btn" id="captureBtn" title="Capture Screenshot">
-                    <i class="fas fa-camera"></i>
-                </button>
-                <button class="icon-btn" id="recordBtn" title="Start Recording">
-                    <i class="fas fa-circle"></i>
-                </button>
-                <button class="icon-btn primary" id="fullscreenBtn" title="Fullscreen">
-                    <i class="fas fa-expand"></i>
-                </button>
-            </div>
-        </header>
+<div class="app-container">
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Video Player -->
-            <div class="player-section">
-                <div class="video-wrapper">
-                    <video id="mainVideo" autoplay playsinline>
-                        <!-- Video source will be added dynamically -->
-                    </video>
-                    
-                    <!-- Overlay elements -->
-                    <div class="video-overlay">
-                        <div class="channel-info-overlay">
-                            <div class="channel-logo-overlay">
-                                <img src="" alt="" id="channelLogoOverlay">
-                            </div>
-                            <div class="channel-details-overlay">
-                                <h3 id="channelNameOverlay">Zgjidhni një kanal</h3>
-                                <p id="programInfoOverlay">Duke pritur për stream...</p>
-                            </div>
-                        </div>
-                        
-                        <div class="playback-info">
-                            <span class="resolution-badge" id="resolutionBadge">HD</span>
-                            <span class="bitrate-badge" id="bitrateBadge">0 Mbps</span>
-                            <span class="buffer-badge" id="bufferBadge">Buffering: 0%</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Loading Spinner -->
-                    <div class="loading-spinner" id="loadingSpinner">
-                        <div class="spinner"></div>
-                        <p>Duke ngarkuar stream...</p>
-                    </div>
-                    
-                    <!-- Error Message -->
-                    <div class="error-message" id="errorMessage">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h4>Nuk ka stream aktiv</h4>
-                        <p>Ju lutem zgjidhni një kanal nga lista</p>
-                        <button class="retry-btn" id="retryStreamBtn">
-                            <i class="fas fa-redo"></i> Riprovoni
-                        </button>
-                    </div>
-                    
-                    <!-- Controls Overlay -->
-                    <div class="controls-overlay">
-                        <div class="progress-bar">
-                            <input type="range" id="seekBar" min="0" max="100" value="0">
-                            <div class="time-display">
-                                <span id="currentTimeDisplay">00:00</span>
-                                <span id="durationDisplay">00:00</span>
-                            </div>
-                        </div>
-                        
-                        <div class="main-controls">
-                            <button class="control-btn large" id="playPauseBtn">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <button class="control-btn" id="rewindBtn">
-                                <i class="fas fa-backward"></i>
-                            </button>
-                            <button class="control-btn" id="forwardBtn">
-                                <i class="fas fa-forward"></i>
-                            </button>
-                            <button class="control-btn" id="prevChannelBtn">
-                                <i class="fas fa-step-backward"></i>
-                            </button>
-                            <button class="control-btn" id="nextChannelBtn">
-                                <i class="fas fa-step-forward"></i>
-                            </button>
-                            <div class="volume-control-overlay">
-                                <i class="fas fa-volume-up" id="volumeIconOverlay"></i>
-                                <input type="range" id="volumeSliderOverlay" min="0" max="100" value="100">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Now Playing Info -->
-                <div class="now-playing">
-                    <div class="now-playing-left">
-                        <div class="channel-logo-now">
-                            <img src="" alt="" id="channelLogoNow">
-                        </div>
-                        <div class="now-playing-info">
-                            <h4 id="nowPlayingChannel">Kanal i pa zgjedhur</h4>
-                            <p id="nowPlayingProgram">Programi aktual</p>
-                        </div>
-                    </div>
-                    <div class="now-playing-right">
-                        <div class="epg-now">
-                            <span class="epg-time" id="epgCurrentTime">Tani:</span>
-                            <span class="epg-title" id="epgCurrentTitle">Pa informacion EPG</span>
-                        </div>
-                        <div class="quality-selector">
-                            <select id="qualitySelect">
-                                <option value="auto">Auto</option>
-                                <option value="1080">1080p</option>
-                                <option value="720" selected>720p</option>
-                                <option value="480">480p</option>
-                                <option value="360">360p</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<header class="main-header">
+    <div class="logo">
+        <i class="fas fa-tv"></i> IPTV<span class="logo-highlight">PRO</span>
+    </div>
+    <div class="header-info">
+        <span class="status online"><i class="fas fa-circle"></i> Online</span>
+        <span id="currentTime">00:00:00</span>
+    </div>
+</header>
 
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <!-- Connection Panel -->
-                <div class="connection-panel">
-                    <div class="panel-header">
-                        <h3><i class="fas fa-plug"></i> Lidhja</h3>
-                        <button class="panel-toggle" id="connectionToggle">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                    </div>
-                    <div class="panel-content">
-                        <div class="connection-type">
-                            <button class="type-btn active" data-type="xtream">
-                                <i class="fas fa-bolt"></i> Xtream
-                            </button>
-                            <button class="type-btn" data-type="m3u">
-                                <i class="fas fa-file-alt"></i> M3U
-                            </button>
-                            <button class="type-btn" data-type="api">
-                                <i class="fas fa-code"></i> API
-                            </button>
-                        </div>
-                        
-                        <!-- Xtream Form -->
-                        <div class="connection-form active" id="xtreamForm">
-                            <div class="form-group">
-                                <label><i class="fas fa-server"></i> Server</label>
-                                <input type="text" id="xtreamServer" placeholder="http://server.com:8000" value="http://">
-                            </div>
-                            <div class="form-group">
-                                <label><i class="fas fa-user"></i> Username</label>
-                                <input type="text" id="xtreamUsername" placeholder="username">
-                            </div>
-                            <div class="form-group">
-                                <label><i class="fas fa-key"></i> Password</label>
-                                <input type="password" id="xtreamPassword" placeholder="password">
-                            </div>
-                            <div class="form-actions">
-                                <button class="btn-connect" id="connectBtn">
-                                    <i class="fas fa-sign-in-alt"></i> Lidhu
-                                </button>
-                                <button class="btn-demo" id="demoBtn">
-                                    <i class="fas fa-play-circle"></i> Demo
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- M3U Form -->
-                        <div class="connection-form" id="m3uForm">
-                            <div class="form-group">
-                                <label><i class="fas fa-link"></i> M3U URL</label>
-                                <input type="text" id="m3uUrl" placeholder="https://example.com/playlist.m3u">
-                            </div>
-                            <div class="form-group">
-                                <label><i class="fas fa-upload"></i> Ngarko skedar</label>
-                                <div class="file-upload">
-                                    <input type="file" id="m3uFile" accept=".m3u,.m3u8">
-                                    <label for="m3uFile">
-                                        <i class="fas fa-cloud-upload-alt"></i> Zgjidh skedar
-                                    </label>
-                                </div>
-                            </div>
-                            <button class="btn-connect" id="loadM3uBtn">
-                                <i class="fas fa-download"></i> Ngarko
-                            </button>
-                        </div>
-                        
-                        <!-- API Form -->
-                        <div class="connection-form" id="apiForm">
-                            <div class="form-group">
-                                <label><i class="fas fa-code"></i> API URL</label>
-                                <input type="text" id="apiUrl" placeholder="https://api.example.com/channels">
-                            </div>
-                            <div class="form-group">
-                                <label><i class="fas fa-key"></i> API Key</label>
-                                <input type="text" id="apiKey" placeholder="API Key">
-                            </div>
-                            <button class="btn-connect" id="loadApiBtn">
-                                <i class="fas fa-sync"></i> Sync
-                            </button>
-                        </div>
-                    </div>
-                </div>
+<div class="main-content">
 
-                <!-- Categories Panel -->
-                <div class="categories-panel">
-                    <div class="panel-header">
-                        <h3><i class="fas fa-list"></i> Kategoritë</h3>
-                        <div class="category-search">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="categorySearch" placeholder="Kërko kategori...">
-                        </div>
-                    </div>
-                    <div class="categories-list" id="categoriesList">
-                        <!-- Categories will be loaded here -->
-                    </div>
-                </div>
+<!-- PLAYER -->
+<div class="player-section">
+    <div class="video-wrapper">
 
-                <!-- Channels Panel -->
-                <div class="channels-panel">
-                    <div class="panel-header">
-                        <h3><i class="fas fa-tv"></i> Kanale</h3>
-                        <div class="channels-stats">
-                            <span id="channelsCount">0</span> kanale
-                        </div>
-                    </div>
-                    
-                    <div class="channels-controls">
-                        <div class="search-channels">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="channelSearch" placeholder="Kërko kanal...">
-                        </div>
-                        <div class="view-options">
-                            <button class="view-btn active" data-view="grid">
-                                <i class="fas fa-th-large"></i>
-                            </button>
-                            <button class="view-btn" data-view="list">
-                                <i class="fas fa-list"></i>
-                            </button>
-                            <button class="view-btn" data-view="favorites">
-                                <i class="fas fa-star"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="channels-container">
-                        <div class="channels-grid" id="channelsGrid">
-                            <!-- Channels will be loaded here -->
-                        </div>
-                        <div class="channels-list-view" id="channelsListView" style="display: none;">
-                            <!-- List view will be loaded here -->
-                        </div>
-                    </div>
-                </div>
+        <video
+            id="mainVideo"
+            autoplay
+            muted
+            playsinline
+            webkit-playsinline
+            preload="auto">
+        </video>
+
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner"></div>
+            <p>Duke ngarkuar…</p>
+        </div>
+
+        <div class="error-message" id="errorMessage" style="display:none">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h4>Error stream</h4>
+            <button id="retryStreamBtn">Riprovoni</button>
+        </div>
+
+        <div class="controls-overlay">
+            <button id="playPauseBtn"><i class="fas fa-play"></i></button>
+            <button id="prevChannelBtn"><i class="fas fa-step-backward"></i></button>
+            <button id="nextChannelBtn"><i class="fas fa-step-forward"></i></button>
+
+            <div class="volume-control-overlay">
+                <input type="range" id="volumeSliderOverlay" min="0" max="100" value="100">
             </div>
         </div>
 
-        <!-- Bottom Status Bar -->
-        <footer class="status-bar">
-            <div class="status-left">
-                <span class="status-item">
-                    <i class="fas fa-satellite"></i>
-                    <span id="currentSource">Nuk ka lidhje</span>
-                </span>
-                <span class="status-item">
-                    <i class="fas fa-database"></i>
-                    <span id="channelsLoaded">0</span> kanale
-                </span>
-                <span class="status-item">
-                    <i class="fas fa-clock"></i>
-                    <span id="uptime">00:00:00</span>
-                </span>
-            </div>
-            <div class="status-right">
-                <span class="status-item">
-                    <i class="fas fa-signal"></i>
-                    <span id="networkStatus">Online</span>
-                </span>
-                <span class="status-item">
-                    <i class="fas fa-memory"></i>
-                    <span id="memoryUsage">0 MB</span>
-                </span>
-                <button class="btn-settings" id="settingsBtn">
-                    <i class="fas fa-cog"></i> Cilësimet
-                </button>
-            </div>
-        </footer>
-    </div>
-
-    <!-- Settings Modal -->
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2><i class="fas fa-cog"></i> Cilësimet</h2>
-                <button class="modal-close" id="closeSettingsBtn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-tabs">
-                    <div class="tab active" data-tab="player">Player</div>
-                    <div class="tab" data-tab="playback">Playback</div>
-                    <div class="tab" data-tab="interface">Interface</div>
-                    <div class="tab" data-tab="advanced">Advanced</div>
-                </div>
-                
-                <div class="settings-content">
-                    <div class="tab-content active" id="playerTab">
-                        <div class="setting-item">
-                            <label>Player Engine</label>
-                            <select id="playerEngine">
-                                <option value="native">Native HTML5</option>
-                                <option value="hls" selected>HLS.js</option>
-                                <option value="dash">Dash.js</option>
-                            </select>
-                        </div>
-                        <div class="setting-item">
-                            <label>Default Quality</label>
-                            <select id="defaultQuality">
-                                <option value="best">Më e mira</option>
-                                <option value="1080">1080p</option>
-                                <option value="720" selected>720p</option>
-                                <option value="480">480p</option>
-                                <option value="360">360p</option>
-                            </select>
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="autoPlay" checked> Auto-play
-                            </label>
-                            <label>
-                                <input type="checkbox" id="autoNext" checked> Auto-next channel
-                            </label>
-                            <label>
-                                <input type="checkbox" id="rememberVolume" checked> Mbaj mend volumin
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="tab-content" id="playbackTab">
-                        <!-- Playback settings will be here -->
-                    </div>
-                </div>
-                
-                <div class="modal-actions">
-                    <button class="btn-secondary" id="resetSettingsBtn">Reset</button>
-                    <button class="btn-primary" id="saveSettingsBtn">Ruaj</button>
-                </div>
-            </div>
+        <div class="channel-info-overlay">
+            <h3 id="channelNameOverlay">Zgjidhni një kanal</h3>
         </div>
+
+    </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+<div class="connection-panel">
+    <h3>Lidhja</h3>
+
+    <div class="connection-form">
+        <input id="xtreamServer" placeholder="http://server:port">
+        <input id="xtreamUsername" placeholder="Username">
+        <input id="xtreamPassword" type="password" placeholder="Password">
+
+        <button id="connectBtn">Lidhu</button>
+        <button id="demoBtn">Demo</button>
     </div>
 
-    <!-- Include HLS.js -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script src="script.js"></script>
+    <div class="connection-form">
+        <input id="m3uUrl" placeholder="M3U URL">
+        <div class="file-upload">
+            <input type="file" id="m3uFile" accept=".m3u,.m3u8">
+            <label for="m3uFile">Ngarko M3U</label>
+        </div>
+        <button id="loadM3uBtn">Ngarko</button>
+    </div>
+</div>
+
+<div class="channels-panel">
+    <h3>Kanale</h3>
+    <div id="channelsGrid"></div>
+</div>
+
+</div>
+</div>
+
+<footer class="status-bar">
+    <span>Uptime: <span id="uptime">00:00:00</span></span>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="script.js"></script>
+
 </body>
 </html>
