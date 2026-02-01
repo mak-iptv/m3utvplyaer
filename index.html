@@ -2,234 +2,215 @@
 <html lang="sq">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IPTV Player - Version i Rregulluar</title>
+<title>IBO IPTV Player</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
-body { background:#121212; color:white; padding:20px; }
-.container { max-width:1200px; margin:0 auto; }
-header { text-align:center; margin-bottom:20px; }
-header h1 { color:#00ff88; margin-bottom:5px; }
-.tabs { display:flex; gap:10px; justify-content:center; margin-bottom:20px; }
-.tab { padding:10px 20px; background:#333; border-radius:5px; cursor:pointer; }
-.tab.active { background:#00ff88; color:black; }
-.tab-content { display:none; background:#1e1e1e; padding:20px; border-radius:10px; margin-bottom:20px; }
-.tab-content.active { display:block; }
-input, textarea, select, button { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:none; }
-button { background:#00ff88; color:black; font-weight:bold; cursor:pointer; }
-button:hover { background:#00cc6a; }
-
-.player-container { background:black; border-radius:10px; overflow:hidden; margin-bottom:20px; height:400px; position:relative; }
-#video-player { width:100%; height:100%; }
-.channel-info { position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.7); padding:5px 10px; border-radius:5px; font-size:14px; }
-
-.categories { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px; justify-content:center; }
-.cat-item { padding:8px 15px; background:rgba(255,255,255,0.1); border-radius:5px; cursor:pointer; }
-.cat-item.active { background:#00ff88; color:black; }
-
-.channels { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; }
-.channel-item { padding:10px; background:rgba(255,255,255,0.1); border-radius:5px; cursor:pointer; text-align:center; }
-.channel-item.active { background:#00ff88; color:black; }
-.channel-item img { width:50px; height:50px; border-radius:50%; margin-bottom:5px; }
-
-.status { text-align:center; padding:10px; border-radius:5px; margin:10px 0; display:none; }
-.status.success { background:rgba(0,255,136,0.2); border:1px solid #00ff88; display:block; }
-.status.error { background:rgba(255,0,0,0.2); border:1px solid #ff4444; display:block; }
-.status.loading { background:rgba(0,150,255,0.2); border:1px solid #0096ff; display:block; }
+body {
+    margin:0;
+    font-family: Arial, sans-serif;
+    background: #1a1a2e;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+#player {
+    width: 100%;
+    height: 350px;
+    background: black;
+}
+.controls {
+    display:flex;
+    gap:10px;
+    padding:10px;
+    background:#111;
+}
+.controls input {
+    flex:1;
+    padding:5px;
+    border-radius:5px;
+    border:none;
+}
+.controls button {
+    padding:5px 10px;
+    border-radius:5px;
+    border:none;
+    cursor:pointer;
+    background:#00ff88;
+    color:black;
+    font-weight:bold;
+}
+.container {
+    display:flex;
+    flex:1;
+    transition: all 0.3s ease;
+}
+.sidebar {
+    width:220px;
+    background:#111;
+    padding:10px;
+    overflow-y:auto;
+    transition: all 0.3s ease;
+}
+.sidebar.hide {
+    width:0;
+    padding:0;
+    overflow:hidden;
+}
+.sidebar div {
+    padding:10px;
+    cursor:pointer;
+    margin-bottom:5px;
+    border-radius:5px;
+}
+.sidebar div:hover {
+    background:#00ff88;
+    color:black;
+}
+.channels {
+    flex:1;
+    display:grid;
+    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
+    gap:10px;
+    padding:10px;
+    overflow-y:auto;
+}
+.channel {
+    background:#222;
+    padding:10px;
+    border-radius:5px;
+    cursor:pointer;
+    text-align:center;
+}
+.channel:hover {
+    background:#00ff88;
+    color:black;
+}
+.channel img {
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    margin-bottom:5px;
+}
 </style>
 </head>
 <body>
+
+<video id="player" controls></video>
+
+<div class="controls">
+    <input type="text" id="m3uUrl" placeholder="Ngarko URL M3U këtu">
+    <button onclick="loadM3U()">Ngarko M3U</button>
+</div>
+
+<div class="controls">
+    <input type="text" id="server" placeholder="Server Xtream">
+    <input type="text" id="user" placeholder="Përdorues">
+    <input type="text" id="pass" placeholder="Fjalëkalim">
+    <button onclick="loginXtream()">Ngarko Xtream</button>
+</div>
+
 <div class="container">
-<header>
-    <h1>📺 IPTV Player</h1>
-    <p>Punon me M3U lokale ose online</p>
-</header>
-
-<div class="tabs">
-    <div class="tab active" onclick="showTab('m3u-tab', event)">M3U Playlist</div>
-    <div class="tab" onclick="showTab('local-tab', event)">Skedar Lokal</div>
-</div>
-
-<!-- M3U Tab -->
-<div id="m3u-tab" class="tab-content active">
-    <input type="text" id="m3u-url" placeholder="https://example.com/playlist.m3u">
-    <button onclick="loadM3UFromURL()">Ngarko M3U</button>
-    <div class="status" id="m3u-status"></div>
-</div>
-
-<!-- Local Tab -->
-<div id="local-tab" class="tab-content">
-    <textarea id="m3u-example" rows="10" style="background:#222;color:#fff;">#EXTM3U
-#EXTINF:-1 tvg-id="Test1" tvg-name="Test Channel 1" tvg-logo="https://img.icons8.com/color/48/000000/tv.png" group-title="Test",Test Channel 1
-https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8</textarea>
-    <button onclick="useExample()">Përdor Shembull</button>
-    <div class="status" id="local-status"></div>
-</div>
-
-<div class="player-container">
-    <video id="video-player" controls playsinline></video>
-    <div class="channel-info" id="channel-info">Zgjidhni një kanal</div>
-</div>
-
-<div class="categories" id="categories-list">
-    <div class="cat-item active" onclick="filterByCategory('all', event)">Të Gjitha</div>
-</div>
-
-<div class="channels" id="channels-list">
-    <div style="text-align:center;padding:50px;color:#ff9900;">Zgjidh një playlist për të parë kanalet</div>
-</div>
+    <div class="sidebar" id="sidebar"></div>
+    <div class="channels" id="channels"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
 let channels = [];
 let currentChannel = null;
-let currentCategory = 'all';
-let hlsPlayer = null;
 
-// Tabs
-function showTab(tabId, e) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    e.currentTarget.classList.add('active');
-}
-
-// Load M3U from URL
-async function loadM3UFromURL() {
-    const url = document.getElementById('m3u-url').value.trim();
-    if(!url){ showStatus('m3u-status','Ju lutem shkruani URL','error'); return; }
-    showStatus('m3u-status','Duke ngarkuar...','loading');
-    try {
-        const resp = await fetch(url);
-        const data = await resp.text();
-        processM3UData(data);
-        showStatus('m3u-status',`✅ U ngarkuan ${channels.length} kanale`,'success');
-    } catch(e){
-        showStatus('m3u-status','❌ Gabim: '+e.message,'error');
-    }
-}
-
-// Use example
-function useExample(){
-    const text = document.getElementById('m3u-example').value;
-    processM3UData(text);
-    showStatus('local-status','✅ Shembulli u ngarkua','success');
-    showTab('m3u-tab', document.querySelector('.tab.active'));
-}
-
-// Process M3U
-function processM3UData(data){
-    channels = parseM3U(data);
-    if(channels.length===0) { alert('Nuk u gjetën kanale'); return; }
-    updateCategories();
-    renderChannels();
-}
-
-// Parse M3U
-function parseM3U(data){
-    const list=[];
-    const lines=data.split('\n');
-    let ch=null;
-    for(let i=0;i<lines.length;i++){
-        const line=lines[i].trim();
-        if(line.startsWith('#EXTINF:')){
-            ch={};
-            ch.name=line.split(',').pop().trim();
-            ch.category=(line.match(/group-title="([^"]+)"/)||[])[1]||'Other';
-            ch.logo=(line.match(/tvg-logo="([^"]+)"/)||[])[1]||'';
-            ch.url='';
-            ch.id=i+Date.now();
-        } else if(ch && line && !line.startsWith('#')){
-            ch.url=line;
-            list.push(ch);
-            ch=null;
-        }
-    }
-    return list;
-}
-
-// Categories
-function updateCategories(){
-    const container=document.getElementById('categories-list');
-    container.innerHTML='<div class="cat-item active" onclick="filterByCategory(\'all\',event)">Të Gjitha</div>';
-    [...new Set(channels.map(c=>c.category))].forEach(cat=>{
-        const div=document.createElement('div');
-        div.className='cat-item';
-        div.textContent=cat;
-        div.onclick=(e)=>filterByCategory(cat,e);
-        container.appendChild(div);
+// ==== FUNKSIONET ====
+function renderSidebar(){
+    const sb = document.getElementById("sidebar");
+    sb.innerHTML="";
+    const cats = [...new Set(channels.map(c=>c.cat))];
+    cats.forEach(cat=>{
+        const d = document.createElement("div");
+        d.innerText=cat;
+        d.onclick=()=>filter(cat);
+        sb.appendChild(d);
     });
+    setTimeout(()=>sb.classList.add("hide"),1500); // zhduket pas 1.5s
 }
 
-function filterByCategory(category,e){
-    currentCategory=category;
-    document.querySelectorAll('.cat-item').forEach(c=>c.classList.remove('active'));
-    if(e) e.currentTarget.classList.add('active');
-    renderChannels(category==='all'?channels:channels.filter(c=>c.category===category));
-}
-
-// Render channels
 function renderChannels(list=channels){
-    const container=document.getElementById('channels-list');
-    if(!list || list.length===0){
-        container.innerHTML='<div style="text-align:center;padding:50px;color:#ff9900;">Nuk u gjetën kanale</div>';
-        return;
-    }
-    container.innerHTML='';
-    list.forEach(ch=>{
-        const div=document.createElement('div');
-        div.className='channel-item';
-        div.innerHTML=`${ch.logo?`<img src="${ch.logo}" onerror="this.src='https://img.icons8.com/color/48/000000/tv.png'">`:''}<div>${ch.name}</div><small style="color:#aaa">${ch.category}</small>`;
-        div.addEventListener('click',()=>playChannel(ch,div));
-        container.appendChild(div);
+    const container = document.getElementById("channels");
+    container.innerHTML="";
+    list.forEach(c=>{
+        const d=document.createElement("div");
+        d.className="channel";
+        d.innerHTML = `<img src="${c.logo}" onerror="this.src='https://img.icons8.com/color/48/000000/tv.png'"><br>${c.name}`;
+        d.onclick=()=>playChannel(c);
+        container.appendChild(d);
     });
 }
 
-// Play channel
-function playChannel(ch,el){
-    currentChannel=ch;
-    document.querySelectorAll('.channel-item').forEach(c=>c.classList.remove('active'));
-    if(el) el.classList.add('active');
-    document.getElementById('channel-info').textContent=`🎬 ${ch.name} | 📂 ${ch.category}`;
-    playStream(ch.url);
+function filter(cat){
+    renderChannels(channels.filter(c=>c.cat===cat));
 }
 
-// Play stream
-function playStream(url){
-    const video=document.getElementById('video-player');
-    if(hlsPlayer){ hlsPlayer.destroy(); hlsPlayer=null; }
-    video.pause();
-    video.src='';
-    if(!url || !url.startsWith('http')) return;
-    if(url.includes('.m3u8')){
-        if(Hls.isSupported()){
-            hlsPlayer=new Hls();
-            hlsPlayer.loadSource(url);
-            hlsPlayer.attachMedia(video);
-            hlsPlayer.on(Hls.Events.MANIFEST_PARSED,()=>video.play().catch(()=>{}));
-        } else if(video.canPlayType('application/vnd.apple.mpegurl')){
-            video.src=url;
-            video.play().catch(()=>{});
-        } else { alert('Shfletuesi nuk mbështet HLS'); }
-    } else {
-        video.src=url;
-        video.play().catch(()=>{});
+function playChannel(c){
+    currentChannel=c;
+    const video=document.getElementById("player");
+    if(Hls.isSupported()){
+        const hls=new Hls();
+        hls.loadSource(c.url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, ()=>video.play());
+    } else if(video.canPlayType('application/vnd.apple.mpegurl')){
+        video.src=c.url;
+        video.play();
     }
 }
 
-// Status
-function showStatus(id,msg,type){
-    const el=document.getElementById(id);
-    el.textContent=msg;
-    el.className='status '+type;
-    if(type!=='loading') setTimeout(()=>el.className='status',5000);
+// ==== M3U ====
+async function loadM3U(){
+    const url = document.getElementById("m3uUrl").value.trim();
+    if(!url) return alert("Shkruaj URL M3U!");
+    try{
+        const txt = await (await fetch(url)).text();
+        channels = parseM3U(txt);
+        renderSidebar();
+        renderChannels();
+    } catch(e){console.warn(e); alert("Gabim në ngarkimin e M3U");}
 }
 
-// Init test
-window.onload=function(){
-    document.getElementById('m3u-url').value='https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8';
-};
+function parseM3U(data){
+    let out=[],c={name:"",url:"",cat:"Other",logo:""};
+    data.split("\n").forEach(l=>{
+        if(l.startsWith("#EXTINF")){
+            c.name=l.split(",").pop().trim();
+            c.cat=(l.match(/group-title="([^"]+)"/)||[])[1]||"Other";
+            c.logo=(l.match(/tvg-logo="([^"]+)"/)||[])[1]||"";
+        } else if(l && !l.startsWith("#")){
+            out.push({...c,url:l.trim()});
+            c={name:"",url:"",cat:"Other",logo:""};
+        }
+    });
+    return out;
+}
+
+// ==== XTREAM ====
+async function loginXtream(){
+    const s=document.getElementById("server").value.trim();
+    const u=document.getElementById("user").value.trim();
+    const p=document.getElementById("pass").value.trim();
+    if(!s||!u||!p) return alert("Plotëso të dhënat Xtream!");
+    try{
+        const catsData=await (await fetch(`${s}/player_api.php?username=${u}&password=${p}&action=get_live_categories`)).json();
+        channels=[]; // pastro kanalet për fillim
+        // ngarko kanalet nga cdo kategori
+        for(const cat of catsData){
+            const chs = await (await fetch(`${s}/player_api.php?username=${u}&password=${p}&action=get_live_streams&category_id=${cat.category_id}`)).json();
+            chs.forEach(c=>{
+                channels.push({name:c.name, url:c.stream_url||`${s}/live/${u}/${p}/${c.stream_id}.m3u8`, cat:cat.category_name, logo:c.stream_icon||""});
+            });
+        }
+        renderSidebar();
+        renderChannels();
+    } catch(e){console.warn(e); alert("Gabim në ngarkimin Xtream");}
+}
 </script>
+
 </body>
 </html>
