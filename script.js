@@ -4,19 +4,22 @@ class IPTVPlayer {
         this.currentChannel = null;
         this.hls = null;
         this.isHlsSupported = false;
-        this.debugMode = false;
-        this.auth = { username: '', password: '' };
         
-        // Variabla të rinj për kontroll
-        this.autoSwitchEnabled = false;
+        // KONFIGURIME STRINGTE PËR TË NDALUAR AUTO-SWITCHING
+        this.autoSwitchEnabled = false; // FIKUR DEFAULT
         this.isSwitching = false;
         this.currentChannelIndex = -1;
         this.playbackAttempts = 0;
-        this.maxPlaybackAttempts = 3;
+        this.maxPlaybackAttempts = 1; // VETËM 1 PROVIM
         this.errorTimeout = null;
         this.retryTimeout = null;
-        this.playbackHistory = [];
-        this.maxHistory = 10;
+        
+        // Kontroll për HLS.js
+        this.hlsErrorCount = 0;
+        this.maxHlsErrors = 2;
+        
+        // Flag për të parandaluar çdo auto-switch
+        this.blockAllAutoSwitches = true;
         
         this.init();
     }
@@ -25,274 +28,328 @@ class IPTVPlayer {
         this.setupElements();
         this.setupEventListeners();
         this.setupHLS();
-        this.loadUserSettings();
         
-        this.showMessage('Welcome to IPTV Player! Load your M3U playlist to start.', 'info');
+        // Fik butonin auto-switch që nga fillimi
+        const autoSwitchToggle = document.getElementById('autoSwitchToggle');
+        if (autoSwitchToggle) {
+            autoSwitchToggle.checked = false;
+            this.autoSwitchEnabled = false;
+        }
         
-        console.log('IPTV Player initialized');
+        this.showMessage('IPTV Player u inicializua. Auto-switch është FIKUR.', 'info');
+        
+        console.log('IPTV Player initialized - AUTO-SWITCH DISABLED');
     }
     
     setupElements() {
-        // ... (kodi i mëparshëm mbetet i njëjtë)
+        // Elementet bazë
+        this.elements = {
+            videoPlayer: document.getElementById('videoPlayer'),
+            channelList: document.getElementById('channelList'),
+            currentChannel: document.getElementById('currentChannel'),
+            status: document.getElementById('status'),
+            playerState: document.getElementById('playerState'),
+            channelsLoaded: document.getElementById('channelsLoaded'),
+            channelCount: document.getElementById('channelCount'),
+            streamStatus: document.getElementById('streamStatus'),
+            bufferIndicator: document.getElementById('bufferIndicator'),
+            playerOverlay: document.getElementById('playerOverlay'),
+            overlayText: document.getElementById('overlayText'),
+            overlayIcon: document.getElementById('overlayIcon')
+        };
         
-        // Shto elemente të reja për kontroll
-        this.createPlaybackControls();
+        // Krijo loading overlay
+        this.createLoadingOverlay();
+        this.createErrorOverlay();
+        this.createStrictModeControls();
     }
     
-    createPlaybackControls() {
-        // Shto kontrolle për auto-switching në player section
+    createStrictModeControls() {
+        // Shto kontrolle strikte për të parandaluar auto-switch
         const playerInfo = document.querySelector('.player-info');
-        const controls = document.createElement('div');
-        controls.className = 'playback-controls';
-        controls.innerHTML = `
-            <div class="control-row">
-                <label class="switch">
-                    <input type="checkbox" id="autoSwitchToggle" checked>
-                    <span class="slider"></span>
-                    <span class="switch-label">Auto Switch on Error</span>
-                </label>
-                <button id="prevChannel" class="btn-small">⏮ Previous</button>
-                <button id="nextChannel" class="btn-small">Next ⏭</button>
-                <button id="retryChannel" class="btn-small">🔄 Retry</button>
+        if (!playerInfo) return;
+        
+        const strictControls = document.createElement('div');
+        strictControls.className = 'strict-controls';
+        strictControls.innerHTML = `
+            <div class="strict-header">
+                <h4>🔒 Strict Playback Controls</h4>
+                <span class="strict-status" id="strictStatus">ACTIVE</span>
             </div>
-            <div class="attempts-counter">
-                Attempts: <span id="attemptsCount">0</span>/3
+            <div class="strict-options">
+                <div class="strict-option">
+                    <label class="strict-switch">
+                        <input type="checkbox" id="strictModeToggle" checked disabled>
+                        <span class="strict-slider"></span>
+                        <span class="strict-label">STRICT MODE (No Auto-switch)</span>
+                    </label>
+                </div>
+                <div class="strict-buttons">
+                    <button id="forceStopSwitch" class="btn-danger">
+                        ⏹️ Force Stop Auto-Switch
+                    </button>
+                    <button id="lockChannel" class="btn-success">
+                        🔒 Lock Current Channel
+                    </button>
+                    <button id="disableHlsRecovery" class="btn-warning">
+                        🚫 Disable HLS Recovery
+                    </button>
+                </div>
+                <div class="protection-status">
+                    <div class="protection-item">
+                        <span class="protection-label">Auto-Switch:</span>
+                        <span class="protection-value blocked">BLOCKED</span>
+                    </div>
+                    <div class="protection-item">
+                        <span class="protection-label">HLS Recovery:</span>
+                        <span class="protection-value blocked" id="hlsRecoveryStatus">BLOCKED</span>
+                    </div>
+                    <div class="protection-item">
+                        <span class="protection-label">Channel Lock:</span>
+                        <span class="protection-value" id="channelLockStatus">OFF</span>
+                    </div>
+                </div>
             </div>
         `;
-        playerInfo.appendChild(controls);
+        
+        playerInfo.appendChild(strictControls);
     }
     
     setupEventListeners() {
-        // ... (kodi ekzistues)
+        // File loading
+        document.getElementById('loadM3U').addEventListener('click', () => {
+            document.getElementById('m3uFile').click();
+        });
         
-        // Shto event listenerë të rinj
-        this.setupPlaybackControlListeners();
+        document.getElementById('m3uFile').addEventListener('change', (e) => {
+            this.handleFileUpload(e.target.files[0]);
+        });
+        
+        document.getElementById('loadURL').addEventListener('click', () => {
+            this.loadFromURL();
+        });
+        
+        // Sample data
+        document.getElementById('loadSample').addEventListener('click', () => {
+            this.loadSampleData();
+        });
+        
+        // Direct play
+        document.getElementById('playDirect').addEventListener('click', () => {
+            this.playDirectStream();
+        });
+        
+        // STRICT CONTROLS
+        this.setupStrictControlListeners();
+        
+        // Video events - KONFIGURIME STRIKTE
+        this.setupStrictVideoEvents();
     }
     
-    setupPlaybackControlListeners() {
-        // Auto-switch toggle
-        document.getElementById('autoSwitchToggle').addEventListener('change', (e) => {
-            this.autoSwitchEnabled = e.target.checked;
-            this.showMessage(`Auto-switch ${this.autoSwitchEnabled ? 'enabled' : 'disabled'}`, 'info');
+    setupStrictControlListeners() {
+        // Force Stop Auto-Switch
+        document.getElementById('forceStopSwitch').addEventListener('click', () => {
+            this.blockAllAutoSwitches = true;
+            this.autoSwitchEnabled = false;
+            this.showMessage('FORCE STOP: All auto-switching disabled', 'warning');
+            this.updateProtectionStatus();
         });
         
-        // Previous channel
-        document.getElementById('prevChannel').addEventListener('click', () => {
-            this.playPreviousChannel();
+        // Lock Channel
+        document.getElementById('lockChannel').addEventListener('click', () => {
+            this.lockCurrentChannel();
         });
         
-        // Next channel
-        document.getElementById('nextChannel').addEventListener('click', () => {
-            this.playNextChannel();
+        // Disable HLS Recovery
+        document.getElementById('disableHlsRecovery').addEventListener('click', () => {
+            this.disableHlsRecovery();
         });
         
-        // Retry current channel
-        document.getElementById('retryChannel').addEventListener('click', () => {
-            this.retryCurrentChannel();
-        });
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            
-            switch(e.key) {
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    this.playPreviousChannel();
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    this.playNextChannel();
-                    break;
-                case 'r':
-                case 'R':
-                    if (e.ctrlKey) {
-                        e.preventDefault();
-                        this.retryCurrentChannel();
-                    }
-                    break;
-                case ' ':
-                    e.preventDefault();
-                    this.togglePlayPause();
-                    break;
-            }
-        });
+        // Auto-switch toggle - GJITHMONË FIKUR
+        const autoSwitchToggle = document.getElementById('autoSwitchToggle');
+        if (autoSwitchToggle) {
+            autoSwitchToggle.checked = false;
+            autoSwitchToggle.disabled = true; // Bëje të pa-editueshme
+            autoSwitchToggle.addEventListener('change', (e) => {
+                // Mos lejo ndryshim
+                e.target.checked = false;
+                this.autoSwitchEnabled = false;
+                this.showMessage('Auto-switch is PERMANENTLY DISABLED in strict mode', 'error');
+            });
+        }
     }
     
-    setupVideoEvents() {
+    setupStrictVideoEvents() {
         const video = this.elements.videoPlayer;
         
-        video.addEventListener('playing', () => {
+        // FSHI çdo event listener ekzistues për të parandaluar konflikte
+        video.replaceWith(video.cloneNode(true));
+        this.elements.videoPlayer = document.getElementById('videoPlayer');
+        
+        const newVideo = this.elements.videoPlayer;
+        
+        // VETËM eventet bazë, JO asnjë auto-recovery
+        newVideo.addEventListener('playing', () => {
             this.elements.playerState.textContent = 'Playing';
             this.elements.streamStatus.textContent = 'Playing';
             this.elements.bufferIndicator.style.display = 'none';
-            this.updatePlayerOverlay('Playing', '▶️');
-            
-            // Reset attempts counter on successful playback
-            this.playbackAttempts = 0;
-            this.updateAttemptsCounter();
-            
-            // Clear any error timeouts
-            this.clearErrorTimeouts();
+            this.hlsErrorCount = 0; // Reset error count kur fillon të luajë
+            console.log('PLAYING - No auto-switch allowed');
         });
         
-        video.addEventListener('pause', () => {
+        newVideo.addEventListener('pause', () => {
             this.elements.playerState.textContent = 'Paused';
             this.elements.streamStatus.textContent = 'Paused';
         });
         
-        video.addEventListener('waiting', () => {
+        newVideo.addEventListener('waiting', () => {
             this.elements.playerState.textContent = 'Buffering';
             this.elements.streamStatus.textContent = 'Buffering...';
             this.elements.bufferIndicator.style.display = 'block';
             
-            // Start timeout for buffering
-            this.startBufferingTimeout();
+            // MOS bëj asgjë automatikisht - vetëm prit
+            console.log('BUFFERING - Waiting for user action');
         });
         
-        video.addEventListener('error', (e) => {
-            console.error('Video error:', e);
+        // ERROR HANDLING STRIKT - MOS bëj asgjë automatikisht
+        newVideo.addEventListener('error', (e) => {
+            console.error('Video error (STRICT MODE):', e);
             this.elements.playerState.textContent = 'Error';
             this.elements.streamStatus.textContent = 'Playback Error';
             
-            // Handle error with delay to prevent immediate switching
-            this.handlePlaybackErrorWithDelay();
+            // SHFAQ MESAZH POR MOS BËJ ASNJË AUTO-SWITCH
+            this.showStrictError();
+            
+            // MOS fillo asnjë timeout për auto-switch
+            // MOS provo të rikthehesh automatikisht
+            // MOS ndërro kanal automatikisht
         });
         
-        video.addEventListener('ended', () => {
-            if (this.autoSwitchEnabled) {
-                this.playNextChannel();
-            }
-        });
-        
-        video.addEventListener('loadeddata', () => {
+        newVideo.addEventListener('loadeddata', () => {
             this.elements.playerState.textContent = 'Loaded';
         });
         
-        // Monitor buffer health
-        this.setupBufferMonitoring();
+        // MOS shto event listener për 'ended' - mos lejo auto-switch
+        // MOS shto buffer monitoring automatik
     }
     
-    setupBufferMonitoring() {
-        const video = this.elements.videoPlayer;
-        let lastTime = 0;
-        let stalledTime = 0;
+    setupHLS() {
+        if (window.Hls) {
+            this.isHlsSupported = Hls.isSupported();
+            console.log('HLS.js supported:', this.isHlsSupported);
+            
+            // Override Hls default behaviors për të parandaluar auto-recovery
+            this.patchHlsBehavior();
+        }
+    }
+    
+    patchHlsBehavior() {
+        // Ruaj konstruktorin origjinal të Hls
+        const OriginalHls = window.Hls;
         
-        const checkBuffer = () => {
-            if (!video.paused && video.currentTime === lastTime) {
-                stalledTime += 100;
-                if (stalledTime > 5000) { // 5 seconds stalled
-                    console.warn('Stream stalled for 5 seconds');
-                    this.handleStreamStall();
-                }
-            } else {
-                stalledTime = 0;
+        // Override konstruktorin për të ndryshuar default config
+        window.Hls = class StrictHls extends OriginalHls {
+            constructor(config = {}) {
+                // Konfigurim STRIKT që parandalon çdo auto-recovery
+                const strictConfig = {
+                    ...config,
+                    // DISABLE ALL AUTO-RECOVERY FEATURES
+                    enableWorker: false, // Worker shkakton probleme
+                    lowLatencyMode: false,
+                    backBufferLength: 0,
+                    
+                    // ZERO RETRIES - MOS PROVO AUTOMATIKISHT
+                    manifestLoadingMaxRetry: 0,
+                    manifestLoadingRetryDelay: 0,
+                    manifestLoadingMaxRetryTimeout: 0,
+                    
+                    levelLoadingMaxRetry: 0,
+                    levelLoadingRetryDelay: 0,
+                    levelLoadingMaxRetryTimeout: 0,
+                    
+                    fragLoadingMaxRetry: 0,
+                    fragLoadingRetryDelay: 0,
+                    fragLoadingMaxRetryTimeout: 0,
+                    
+                    // DISABLE AUTO-QUALITY SWITCHING
+                    autoLevelEnabled: false,
+                    capLevelToPlayerSize: false,
+                    capLevelOnFPSDrop: false,
+                    
+                    // DISABLE OTHER AUTO-FEATURES
+                    testBandwidth: false,
+                    abrEwmaDefaultEstimate: 0,
+                    abrEwmaSlowLive: 0,
+                    abrEwmaFastLive: 0,
+                    abrEwmaDefaultLive: 0,
+                    abrEwmaSlowVoD: 0,
+                    abrEwmaFastVoD: 0,
+                    abrEwmaDefaultVoD: 0,
+                    
+                    // MAX BUFFER VERY SMALL
+                    maxMaxBufferLength: 1,
+                    maxBufferSize: 1000,
+                    
+                    // DISABLE LIVE SYNC
+                    liveSyncDurationCount: 0,
+                    liveMaxLatencyDurationCount: 0,
+                    liveSyncDuration: 0
+                };
+                
+                super(strictConfig);
+                
+                // Override event handlers për të parandaluar auto-recovery
+                this.on(this.Events.ERROR, (event, data) => {
+                    console.log('HLS ERROR (STRICT MODE - NO AUTO-RECOVERY):', data);
+                    
+                    // MOS bëj asnjë auto-recovery
+                    // MOS thirr startLoad()
+                    // MOS thirr recoverMediaError()
+                    // MOS bëj asgjë automatikisht
+                    
+                    // Vetëm log dhe stop
+                    if (data.fatal) {
+                        console.log('FATAL HLS ERROR - STOPPING PLAYBACK');
+                        this.destroy();
+                    }
+                });
             }
-            lastTime = video.currentTime;
         };
         
-        setInterval(checkBuffer, 100);
-    }
-    
-    handleStreamStall() {
-        if (this.playbackAttempts < this.maxPlaybackAttempts) {
-            this.playbackAttempts++;
-            this.updateAttemptsCounter();
-            this.showMessage(`Stream stalled, retrying... (${this.playbackAttempts}/${this.maxPlaybackAttempts})`, 'warning');
-            this.retryCurrentChannel();
-        } else {
-            this.handlePlaybackError();
-        }
-    }
-    
-    handlePlaybackErrorWithDelay() {
-        // Clear any existing timeout
-        this.clearErrorTimeouts();
-        
-        // Wait 3 seconds before handling error (give time for auto-recovery)
-        this.errorTimeout = setTimeout(() => {
-            this.handlePlaybackError();
-        }, 3000);
-    }
-    
-    clearErrorTimeouts() {
-        if (this.errorTimeout) {
-            clearTimeout(this.errorTimeout);
-            this.errorTimeout = null;
-        }
-        if (this.retryTimeout) {
-            clearTimeout(this.retryTimeout);
-            this.retryTimeout = null;
-        }
-    }
-    
-    handlePlaybackError() {
-        if (this.isSwitching) return;
-        
-        this.playbackAttempts++;
-        this.updateAttemptsCounter();
-        
-        if (this.playbackAttempts >= this.maxPlaybackAttempts) {
-            this.showError(`Failed to play ${this.currentChannel?.name || 'channel'} after ${this.maxPlaybackAttempts} attempts`);
-            
-            if (this.autoSwitchEnabled) {
-                this.showMessage('Auto-switching to next channel...', 'info');
-                setTimeout(() => this.playNextChannel(), 2000);
-            }
-        } else {
-            this.showMessage(`Playback error, retrying... (${this.playbackAttempts}/${this.maxPlaybackAttempts})`, 'warning');
-            this.retryTimeout = setTimeout(() => this.retryCurrentChannel(), 2000);
-        }
-    }
-    
-    startBufferingTimeout() {
-        // If buffering takes too long, try to recover
-        setTimeout(() => {
-            if (this.elements.videoPlayer.readyState < 3) { // Still loading
-                this.showMessage('Buffering taking too long, trying to recover...', 'warning');
-                this.retryCurrentChannel();
-            }
-        }, 10000); // 10 seconds
+        // Ruaj reference
+        window.Hls = Object.assign(window.Hls, OriginalHls);
     }
     
     async playChannel(channel, index) {
         if (this.isSwitching) {
-            console.log('Already switching channels, please wait...');
+            console.log('Already switching, please wait...');
             return;
         }
         
         this.isSwitching = true;
         this.showLoading(`Loading ${channel.name}...`);
         
-        // Add to playback history
-        this.addToHistory(index);
-        
         try {
+            // Stop any existing playback COMPLETELY
+            await this.stopAllPlayback();
+            
             // Update UI
             this.setActiveChannel(index);
             this.updateChannelInfo(channel);
             this.currentChannelIndex = index;
+            this.currentChannel = channel;
             this.playbackAttempts = 0;
-            this.updateAttemptsCounter();
             
-            // Stop any existing playback
-            await this.stopCurrentPlayback();
-            
-            // Play new stream
-            await this.playStream(channel.url);
+            // Play new stream with STRICT settings
+            await this.playStreamStrict(channel.url);
             
             this.showMessage(`Playing: ${channel.name}`, 'success');
             
         } catch (error) {
             console.error('Play channel error:', error);
             
-            if (this.autoSwitchEnabled && !error.message.includes('user aborted')) {
-                this.showMessage(`Failed to play channel, trying next one...`, 'warning');
-                setTimeout(() => this.playNextChannel(), 1000);
-            } else {
-                this.showError(`Failed to play: ${error.message}`);
-                this.updatePlayerOverlay('Playback Failed', '❌');
-            }
+            // MOS PROVO AUTO-SWITCH KURRË
+            this.showStrictError(`Failed to play: ${error.message}. Click another channel manually.`);
             
         } finally {
             this.isSwitching = false;
@@ -300,205 +357,182 @@ class IPTVPlayer {
         }
     }
     
-    async stopCurrentPlayback() {
+    async stopAllPlayback() {
         const video = this.elements.videoPlayer;
         
-        // Pause and reset video
+        // Pause and reset
         video.pause();
         video.src = '';
         video.load();
         
-        // Destroy HLS instance if exists
+        // Destroy HLS instance COMPLETELY
         if (this.hls) {
-            this.hls.destroy();
-            this.hls = null;
+            // Force destroy without any cleanup that might trigger events
+            try {
+                this.hls.destroy();
+                this.hls = null;
+            } catch (e) {
+                console.log('Force HLS destroy');
+            }
         }
         
-        // Clear any pending timeouts
-        this.clearErrorTimeouts();
+        // Clear ALL timeouts and intervals
+        this.clearAllTimeouts();
         
-        // Small delay to ensure cleanup
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Force garbage collection
+        video.removeAttribute('src');
+        video.load();
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
     }
     
-    async playStream(url) {
-        return new Promise(async (resolve, reject) => {
+    clearAllTimeouts() {
+        if (this.errorTimeout) clearTimeout(this.errorTimeout);
+        if (this.retryTimeout) clearTimeout(this.retryTimeout);
+        this.errorTimeout = null;
+        this.retryTimeout = null;
+        
+        // Clear any other potential intervals
+        const highestId = window.setTimeout(() => {}, 0);
+        for (let i = 0; i < highestId; i++) {
+            window.clearTimeout(i);
+            window.clearInterval(i);
+        }
+    }
+    
+    async playStreamStrict(url) {
+        return new Promise((resolve, reject) => {
             const video = this.elements.videoPlayer;
-            let playAttempted = false;
             
-            const cleanup = () => {
-                video.removeEventListener('canplay', canplayHandler);
-                video.removeEventListener('error', errorHandler);
-                clearTimeout(playTimeout);
+            // Reset video completely
+            video.src = '';
+            video.load();
+            
+            // Setup ONE-TIME event listeners
+            const onCanPlay = () => {
+                cleanup();
+                video.play().then(resolve).catch(reject);
             };
             
-            const canplayHandler = () => {
-                if (!playAttempted) {
-                    playAttempted = true;
-                    video.play().then(resolve).catch(errorHandler);
-                }
-            };
-            
-            const errorHandler = (e) => {
+            const onError = (e) => {
                 cleanup();
                 reject(new Error(`Playback failed: ${video.error?.message || 'Unknown error'}`));
             };
             
-            const playTimeout = setTimeout(() => {
-                if (!playAttempted) {
+            const cleanup = () => {
+                video.removeEventListener('canplay', onCanPlay);
+                video.removeEventListener('error', onError);
+            };
+            
+            video.addEventListener('canplay', onCanPlay, { once: true });
+            video.addEventListener('error', onError, { once: true });
+            
+            // Set source and load
+            video.src = url;
+            video.load();
+            
+            // Timeout për të mos pritur pafundësisht
+            setTimeout(() => {
+                if (video.readyState < 2) { // Nuk ka filluar të ngarkohet
                     cleanup();
                     reject(new Error('Playback timeout'));
-                }
-            }, 15000);
-            
-            video.addEventListener('canplay', canplayHandler);
-            video.addEventListener('error', errorHandler);
-            
-            try {
-                if (url.includes('.m3u8') && this.isHlsSupported) {
-                    await this.playWithHLS(url);
-                } else {
-                    video.src = url;
-                    video.load();
-                }
-                
-                // If video is already ready, trigger canplay
-                if (video.readyState >= 3) {
-                    canplayHandler();
-                }
-                
-            } catch (error) {
-                cleanup();
-                reject(error);
-            }
-        });
-    }
-    
-    async playWithHLS(url) {
-        return new Promise((resolve, reject) => {
-            // Destroy existing HLS instance
-            if (this.hls) {
-                this.hls.destroy();
-            }
-            
-            this.hls = new Hls({
-                enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 90,
-                manifestLoadingTimeOut: 10000,
-                manifestLoadingMaxRetry: 2, // Reduced retries
-                levelLoadingTimeOut: 10000,
-                levelLoadingMaxRetry: 2,
-                fragLoadingTimeOut: 15000,
-                fragLoadingMaxRetry: 2,
-                fragLoadingMaxRetryTimeout: 2000,
-                manifestLoadingMaxRetryTimeout: 2000,
-                levelLoadingMaxRetryTimeout: 2000,
-                
-                // Error recovery configuration
-                enableSoftwareAES: true,
-                stretchShortVideoTrack: true,
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
-                maxBufferSize: 60 * 1000 * 1000,
-                liveSyncDurationCount: 3,
-                liveMaxLatencyDurationCount: 10
-            });
-            
-            this.hls.loadSource(url);
-            this.hls.attachMedia(this.elements.videoPlayer);
-            
-            // Prevent HLS from auto-switching quality levels too aggressively
-            this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-                console.log('Quality level switched to:', data.level);
-            });
-            
-            this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                console.log('HLS manifest parsed successfully');
-                resolve();
-            });
-            
-            this.hls.on(Hls.Events.ERROR, (event, data) => {
-                console.error('HLS error:', data);
-                
-                if (data.fatal) {
-                    switch(data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log('Network error, trying to recover...');
-                            this.hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log('Media error, trying to recover...');
-                            this.hls.recoverMediaError();
-                            break;
-                        default:
-                            console.log('Fatal HLS error, destroying instance');
-                            this.hls.destroy();
-                            this.hls = null;
-                            reject(new Error('HLS fatal error'));
-                            break;
-                    }
-                }
-            });
-            
-            // Timeout for HLS loading
-            setTimeout(() => {
-                if (this.hls && !this.hls.media) {
-                    this.hls.destroy();
-                    this.hls = null;
-                    reject(new Error('HLS loading timeout'));
                 }
             }, 10000);
         });
     }
     
-    playPreviousChannel() {
-        if (this.channels.length === 0 || this.isSwitching) return;
+    showStrictError(message = 'Playback error. Channel will NOT switch automatically.') {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'strict-error';
+        errorDiv.innerHTML = `
+            <div class="strict-error-header">
+                <span class="strict-error-icon">🚫</span>
+                <strong>STRICT MODE ERROR</strong>
+            </div>
+            <div class="strict-error-body">
+                ${message}
+            </div>
+            <div class="strict-error-actions">
+                <button onclick="iptvPlayer.retryCurrentChannelStrict()" class="btn-warning">
+                    🔄 Manual Retry
+                </button>
+                <button onclick="this.parentElement.parentElement.remove()" class="btn-small">
+                    Close
+                </button>
+            </div>
+        `;
         
-        let newIndex = this.currentChannelIndex - 1;
-        if (newIndex < 0) newIndex = this.channels.length - 1;
+        // Fshi çdo error ekzistues
+        document.querySelectorAll('.strict-error').forEach(el => el.remove());
         
-        this.playChannel(this.channels[newIndex], newIndex);
+        document.querySelector('.player-section').appendChild(errorDiv);
+        
+        // Auto-remove pas 10 sekondash
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 10000);
     }
     
-    playNextChannel() {
-        if (this.channels.length === 0 || this.isSwitching) return;
-        
-        let newIndex = this.currentChannelIndex + 1;
-        if (newIndex >= this.channels.length) newIndex = 0;
-        
-        this.playChannel(this.channels[newIndex], newIndex);
-    }
-    
-    retryCurrentChannel() {
-        if (this.currentChannel && this.currentChannelIndex >= 0 && !this.isSwitching) {
+    retryCurrentChannelStrict() {
+        if (this.currentChannel && this.currentChannelIndex >= 0) {
             this.playChannel(this.currentChannel, this.currentChannelIndex);
         }
     }
     
-    togglePlayPause() {
-        const video = this.elements.videoPlayer;
-        if (video.paused) {
-            video.play().catch(e => console.log('Play failed:', e));
+    lockCurrentChannel() {
+        // Blloko çdo ndryshim kanali
+        const lockStatus = document.getElementById('channelLockStatus');
+        if (lockStatus.textContent === 'OFF') {
+            lockStatus.textContent = 'ON';
+            lockStatus.className = 'protection-value active';
+            
+            // Blloko klikimet në kanalet e tjera
+            document.querySelectorAll('.channel-item').forEach(item => {
+                if (!item.classList.contains('active')) {
+                    item.style.opacity = '0.5';
+                    item.style.pointerEvents = 'none';
+                }
+            });
+            
+            this.showMessage('Channel LOCKED - Other channels disabled', 'warning');
         } else {
-            video.pause();
+            lockStatus.textContent = 'OFF';
+            lockStatus.className = 'protection-value';
+            
+            // Zgjidh bllokimin
+            document.querySelectorAll('.channel-item').forEach(item => {
+                item.style.opacity = '1';
+                item.style.pointerEvents = 'auto';
+            });
+            
+            this.showMessage('Channel UNLOCKED', 'info');
         }
     }
     
-    addToHistory(index) {
-        this.playbackHistory.unshift(index);
-        if (this.playbackHistory.length > this.maxHistory) {
-            this.playbackHistory.pop();
-        }
+    disableHlsRecovery() {
+        const recoveryStatus = document.getElementById('hlsRecoveryStatus');
+        recoveryStatus.textContent = 'DISABLED';
+        recoveryStatus.className = 'protection-value disabled';
+        
+        // Çaktivizo plotësisht HLS.js
+        this.isHlsSupported = false;
+        window.Hls = null;
+        
+        this.showMessage('HLS.js COMPLETELY DISABLED - Using native playback only', 'warning');
     }
     
-    updateAttemptsCounter() {
-        const counter = document.getElementById('attemptsCount');
-        if (counter) {
-            counter.textContent = this.playbackAttempts;
-            counter.className = this.playbackAttempts > 1 ? 'warning' : '';
-        }
+    updateProtectionStatus() {
+        const strictStatus = document.getElementById('strictStatus');
+        strictStatus.textContent = this.blockAllAutoSwitches ? 'ACTIVE' : 'INACTIVE';
+        strictStatus.className = this.blockAllAutoSwitches ? 'active' : '';
     }
     
-    // ... (pjesa tjetër e metodave mbetet e njëjtë)
+    // ... (metodat e tjera mbeten të njëjta)
 }
+
+// Initialize kur faqja ngarkohet
+document.addEventListener('DOMContentLoaded', () => {
+    window.iptvPlayer = new IPTVPlayer();
+});
