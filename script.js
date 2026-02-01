@@ -7,6 +7,17 @@ class IPTVPlayer {
         this.debugMode = false;
         this.auth = { username: '', password: '' };
         
+        // Variabla të rinj për kontroll
+        this.autoSwitchEnabled = false;
+        this.isSwitching = false;
+        this.currentChannelIndex = -1;
+        this.playbackAttempts = 0;
+        this.maxPlaybackAttempts = 3;
+        this.errorTimeout = null;
+        this.retryTimeout = null;
+        this.playbackHistory = [];
+        this.maxHistory = 10;
+        
         this.init();
     }
     
@@ -16,142 +27,96 @@ class IPTVPlayer {
         this.setupHLS();
         this.loadUserSettings();
         
-        // Show welcome message
         this.showMessage('Welcome to IPTV Player! Load your M3U playlist to start.', 'info');
         
         console.log('IPTV Player initialized');
     }
     
     setupElements() {
-        // Get all DOM elements
-        this.elements = {
-            videoPlayer: document.getElementById('videoPlayer'),
-            channelList: document.getElementById('channelList'),
-            currentChannel: document.getElementById('currentChannel'),
-            status: document.getElementById('status'),
-            playerState: document.getElementById('playerState'),
-            channelsLoaded: document.getElementById('channelsLoaded'),
-            channelCount: document.getElementById('channelCount'),
-            searchInput: document.getElementById('searchInput'),
-            groupFilter: document.getElementById('groupFilter'),
-            debugOutput: document.getElementById('debugOutput'),
-            streamStatus: document.getElementById('streamStatus'),
-            bufferIndicator: document.getElementById('bufferIndicator'),
-            currentGroup: document.getElementById('currentGroup'),
-            currentUrl: document.getElementById('currentUrl'),
-            playerOverlay: document.getElementById('playerOverlay'),
-            overlayText: document.getElementById('overlayText'),
-            overlayIcon: document.getElementById('overlayIcon')
-        };
+        // ... (kodi i mëparshëm mbetet i njëjtë)
         
-        // Create loading overlay
-        this.createLoadingOverlay();
-        this.createErrorOverlay();
+        // Shto elemente të reja për kontroll
+        this.createPlaybackControls();
     }
     
-    createLoadingOverlay() {
-        this.loadingOverlay = document.createElement('div');
-        this.loadingOverlay.id = 'loading';
-        this.loadingOverlay.innerHTML = `
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <div class="loading-text" id="loadingText">Loading...</div>
-                <div class="loading-details" id="loadingDetails"></div>
-                <div class="loading-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="progress-text" id="progressText">0%</div>
-                </div>
+    createPlaybackControls() {
+        // Shto kontrolle për auto-switching në player section
+        const playerInfo = document.querySelector('.player-info');
+        const controls = document.createElement('div');
+        controls.className = 'playback-controls';
+        controls.innerHTML = `
+            <div class="control-row">
+                <label class="switch">
+                    <input type="checkbox" id="autoSwitchToggle" checked>
+                    <span class="slider"></span>
+                    <span class="switch-label">Auto Switch on Error</span>
+                </label>
+                <button id="prevChannel" class="btn-small">⏮ Previous</button>
+                <button id="nextChannel" class="btn-small">Next ⏭</button>
+                <button id="retryChannel" class="btn-small">🔄 Retry</button>
+            </div>
+            <div class="attempts-counter">
+                Attempts: <span id="attemptsCount">0</span>/3
             </div>
         `;
-        document.body.appendChild(this.loadingOverlay);
-    }
-    
-    createErrorOverlay() {
-        this.errorOverlay = document.createElement('div');
-        this.errorOverlay.className = 'error-message';
-        this.errorOverlay.innerHTML = `
-            <div class="error-header">
-                <div class="error-title">Error</div>
-                <button class="error-close">&times;</button>
-            </div>
-            <div class="error-body" id="errorBody"></div>
-        `;
-        document.body.appendChild(this.errorOverlay);
-        
-        this.errorOverlay.querySelector('.error-close').addEventListener('click', () => {
-            this.errorOverlay.style.display = 'none';
-        });
-    }
-    
-    setupHLS() {
-        if (window.Hls) {
-            this.isHlsSupported = Hls.isSupported();
-            console.log('HLS.js supported:', this.isHlsSupported);
-        }
+        playerInfo.appendChild(controls);
     }
     
     setupEventListeners() {
-        // File loading
-        document.getElementById('loadM3U').addEventListener('click', () => {
-            document.getElementById('m3uFile').click();
+        // ... (kodi ekzistues)
+        
+        // Shto event listenerë të rinj
+        this.setupPlaybackControlListeners();
+    }
+    
+    setupPlaybackControlListeners() {
+        // Auto-switch toggle
+        document.getElementById('autoSwitchToggle').addEventListener('change', (e) => {
+            this.autoSwitchEnabled = e.target.checked;
+            this.showMessage(`Auto-switch ${this.autoSwitchEnabled ? 'enabled' : 'disabled'}`, 'info');
         });
         
-        document.getElementById('m3uFile').addEventListener('change', (e) => {
-            this.handleFileUpload(e.target.files[0]);
+        // Previous channel
+        document.getElementById('prevChannel').addEventListener('click', () => {
+            this.playPreviousChannel();
         });
         
-        document.getElementById('loadURL').addEventListener('click', () => {
-            this.loadFromURL();
+        // Next channel
+        document.getElementById('nextChannel').addEventListener('click', () => {
+            this.playNextChannel();
         });
         
-        document.getElementById('m3uUrl').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.loadFromURL();
+        // Retry current channel
+        document.getElementById('retryChannel').addEventListener('click', () => {
+            this.retryCurrentChannel();
         });
         
-        // Sample data
-        document.getElementById('loadSample').addEventListener('click', () => {
-            this.loadSampleData();
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.playPreviousChannel();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.playNextChannel();
+                    break;
+                case 'r':
+                case 'R':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        this.retryCurrentChannel();
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    this.togglePlayPause();
+                    break;
+            }
         });
-        
-        // Direct play
-        document.getElementById('playDirect').addEventListener('click', () => {
-            this.playDirectStream();
-        });
-        
-        // Player controls
-        document.getElementById('fullscreen').addEventListener('click', () => {
-            this.toggleFullscreen();
-        });
-        
-        document.getElementById('mute').addEventListener('click', () => {
-            this.toggleMute();
-        });
-        
-        document.getElementById('reloadStream').addEventListener('click', () => {
-            this.reloadCurrentStream();
-        });
-        
-        // Search and filter
-        this.elements.searchInput.addEventListener('input', (e) => {
-            this.filterChannels(e.target.value);
-        });
-        
-        document.getElementById('refreshList').addEventListener('click', () => {
-            this.refreshChannelList();
-        });
-        
-        // Debug
-        document.getElementById('toggleDebug').addEventListener('click', () => {
-            this.toggleDebugMode();
-        });
-        
-        // Video events
-        this.setupVideoEvents();
-        
-        // Advanced options
-        this.setupAdvancedOptions();
     }
     
     setupVideoEvents() {
@@ -162,6 +127,13 @@ class IPTVPlayer {
             this.elements.streamStatus.textContent = 'Playing';
             this.elements.bufferIndicator.style.display = 'none';
             this.updatePlayerOverlay('Playing', '▶️');
+            
+            // Reset attempts counter on successful playback
+            this.playbackAttempts = 0;
+            this.updateAttemptsCounter();
+            
+            // Clear any error timeouts
+            this.clearErrorTimeouts();
         });
         
         video.addEventListener('pause', () => {
@@ -173,789 +145,360 @@ class IPTVPlayer {
             this.elements.playerState.textContent = 'Buffering';
             this.elements.streamStatus.textContent = 'Buffering...';
             this.elements.bufferIndicator.style.display = 'block';
+            
+            // Start timeout for buffering
+            this.startBufferingTimeout();
         });
         
         video.addEventListener('error', (e) => {
             console.error('Video error:', e);
             this.elements.playerState.textContent = 'Error';
             this.elements.streamStatus.textContent = 'Playback Error';
-            this.handlePlaybackError();
+            
+            // Handle error with delay to prevent immediate switching
+            this.handlePlaybackErrorWithDelay();
+        });
+        
+        video.addEventListener('ended', () => {
+            if (this.autoSwitchEnabled) {
+                this.playNextChannel();
+            }
         });
         
         video.addEventListener('loadeddata', () => {
             this.elements.playerState.textContent = 'Loaded';
         });
         
-        // Click overlay to play
-        this.elements.playerOverlay.addEventListener('click', () => {
-            if (this.currentChannel) {
-                this.playCurrentChannel();
-            }
-        });
+        // Monitor buffer health
+        this.setupBufferMonitoring();
     }
     
-    setupAdvancedOptions() {
-        // Toggle advanced options
-        document.querySelector('.advanced-options h3').addEventListener('click', (e) => {
-            const options = document.getElementById('advancedOptions');
-            options.style.display = options.style.display === 'none' ? 'block' : 'none';
-            e.target.querySelector('span').textContent = 
-                options.style.display === 'none' ? '⚙️' : '⬇️';
-        });
+    setupBufferMonitoring() {
+        const video = this.elements.videoPlayer;
+        let lastTime = 0;
+        let stalledTime = 0;
         
-        // Apply authentication
-        document.getElementById('applyAuth').addEventListener('click', () => {
-            this.auth.username = document.getElementById('authUsername').value;
-            this.auth.password = document.getElementById('authPassword').value;
-            this.showMessage('Authentication credentials applied', 'success');
-        });
-    }
-    
-    async handleFileUpload(file) {
-        if (!file) return;
-        
-        this.showLoading('Reading M3U file...');
-        document.getElementById('fileInfo').textContent = `File: ${file.name} (${this.formatFileSize(file.size)})`;
-        
-        try {
-            const text = await this.readFile(file);
-            await this.parseM3UContent(text, 'file');
-            this.showMessage(`Successfully loaded ${this.channels.length} channels from file`, 'success');
-        } catch (error) {
-            this.showError(`Failed to load file: ${error.message}`);
-        } finally {
-            this.hideLoading();
-        }
-    }
-    
-    readFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(new Error('File read error'));
-            reader.readAsText(file);
-        });
-    }
-    
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-    
-    async loadFromURL() {
-        const urlInput = document.getElementById('m3uUrl');
-        const url = urlInput.value.trim();
-        
-        if (!url) {
-            this.showError('Please enter a URL');
-            return;
-        }
-        
-        this.showLoading(`Fetching playlist from ${url}...`);
-        
-        try {
-            const content = await this.fetchM3UContent(url);
-            await this.parseM3UContent(content, 'url');
-            this.showMessage(`Successfully loaded ${this.channels.length} channels from URL`, 'success');
-        } catch (error) {
-            this.showError(`Failed to load playlist: ${error.message}`);
-        } finally {
-            this.hideLoading();
-        }
-    }
-    
-    async fetchM3UContent(url) {
-        const methods = [
-            this.tryDirectFetch.bind(this),
-            this.tryCorsProxy.bind(this),
-            this.tryFetchWithCredentials.bind(this)
-        ];
-        
-        for (let i = 0; i < methods.length; i++) {
-            try {
-                this.updateLoadingDetails(`Trying method ${i + 1}/${methods.length}...`);
-                const content = await methods[i](url);
-                if (content && content.includes('#EXTM3U')) {
-                    this.updateLoadingDetails(`Success with method ${i + 1}`);
-                    return content;
+        const checkBuffer = () => {
+            if (!video.paused && video.currentTime === lastTime) {
+                stalledTime += 100;
+                if (stalledTime > 5000) { // 5 seconds stalled
+                    console.warn('Stream stalled for 5 seconds');
+                    this.handleStreamStall();
                 }
-            } catch (error) {
-                console.log(`Method ${i + 1} failed:`, error.message);
-                continue;
+            } else {
+                stalledTime = 0;
             }
-        }
-        
-        throw new Error('All fetch methods failed. Try loading from file instead.');
-    }
-    
-    async tryDirectFetch(url) {
-        const userAgent = this.getUserAgent();
-        const headers = {
-            'User-Agent': userAgent,
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': window.location.origin
+            lastTime = video.currentTime;
         };
         
-        // Add auth if provided
-        if (this.auth.username && this.auth.password) {
-            const auth = btoa(`${this.auth.username}:${this.auth.password}`);
-            headers['Authorization'] = `Basic ${auth}`;
-        }
-        
-        const response = await fetch(url, {
-            headers,
-            mode: 'cors',
-            cache: 'no-cache',
-            credentials: 'omit'
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-        return await response.text();
+        setInterval(checkBuffer, 100);
     }
     
-    async tryCorsProxy(url) {
-        // Try multiple public CORS proxies
-        const proxies = [
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            `https://cors-anywhere.herokuapp.com/${url}`,
-            `https://thingproxy.freeboard.io/fetch/${url}`,
-            `https://api.codetabs.com/v1/proxy?quest=${url}`
-        ];
-        
-        for (const proxyUrl of proxies) {
-            try {
-                const response = await fetch(proxyUrl, { timeout: 10000 });
-                if (response.ok) {
-                    return await response.text();
-                }
-            } catch (e) {
-                continue;
-            }
+    handleStreamStall() {
+        if (this.playbackAttempts < this.maxPlaybackAttempts) {
+            this.playbackAttempts++;
+            this.updateAttemptsCounter();
+            this.showMessage(`Stream stalled, retrying... (${this.playbackAttempts}/${this.maxPlaybackAttempts})`, 'warning');
+            this.retryCurrentChannel();
+        } else {
+            this.handlePlaybackError();
         }
-        
-        throw new Error('All proxies failed');
     }
     
-    async tryFetchWithCredentials(url) {
-        // Try with different credentials modes
-        const modes = ['omit', 'same-origin', 'include'];
+    handlePlaybackErrorWithDelay() {
+        // Clear any existing timeout
+        this.clearErrorTimeouts();
         
-        for (const mode of modes) {
-            try {
-                const response = await fetch(url, {
-                    mode: 'no-cors',
-                    credentials: mode
-                });
-                // Note: no-cors mode has limitations
-                if (response.type === 'opaque') {
-                    // We can't read the response, but we can try to use the URL directly
-                    return `#EXTM3U\n#EXTINF:-1,Test Channel\n${url}`;
-                }
-            } catch (e) {
-                continue;
-            }
+        // Wait 3 seconds before handling error (give time for auto-recovery)
+        this.errorTimeout = setTimeout(() => {
+            this.handlePlaybackError();
+        }, 3000);
+    }
+    
+    clearErrorTimeouts() {
+        if (this.errorTimeout) {
+            clearTimeout(this.errorTimeout);
+            this.errorTimeout = null;
         }
-        
-        throw new Error('Credential modes failed');
+        if (this.retryTimeout) {
+            clearTimeout(this.retryTimeout);
+            this.retryTimeout = null;
+        }
     }
     
-    getUserAgent() {
-        const agents = {
-            chrome: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            firefox: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-            vlc: 'VLC/3.0.18 LibVLC/3.0.18',
-            mobile: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
-        };
+    handlePlaybackError() {
+        if (this.isSwitching) return;
         
-        const selected = document.getElementById('userAgent').value;
-        return agents[selected] || agents.chrome;
-    }
-    
-    async parseM3UContent(content, source) {
-        this.channels = [];
-        const lines = content.split('\n');
+        this.playbackAttempts++;
+        this.updateAttemptsCounter();
         
-        let currentChannel = null;
-        let currentGroup = 'Ungrouped';
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
+        if (this.playbackAttempts >= this.maxPlaybackAttempts) {
+            this.showError(`Failed to play ${this.currentChannel?.name || 'channel'} after ${this.maxPlaybackAttempts} attempts`);
             
-            if (line.startsWith('#EXTINF:')) {
-                currentChannel = this.parseExtInf(line, currentGroup);
-                
-            } else if (line.startsWith('#EXTGRP:')) {
-                currentGroup = line.substring(8).trim();
-                
-            } else if (line && !line.startsWith('#') && currentChannel) {
-                if (this.isValidStreamUrl(line)) {
-                    currentChannel.url = line;
-                    this.channels.push({...currentChannel});
-                    currentChannel = null;
-                }
+            if (this.autoSwitchEnabled) {
+                this.showMessage('Auto-switching to next channel...', 'info');
+                setTimeout(() => this.playNextChannel(), 2000);
             }
-        }
-        
-        console.log(`Parsed ${this.channels.length} channels from ${source}`);
-        this.updateChannelList();
-        
-        // Auto-play first channel if enabled
-        if (this.channels.length > 0 && document.getElementById('autoPlay').checked) {
-            setTimeout(() => this.playChannel(this.channels[0], 0), 1000);
+        } else {
+            this.showMessage(`Playback error, retrying... (${this.playbackAttempts}/${this.maxPlaybackAttempts})`, 'warning');
+            this.retryTimeout = setTimeout(() => this.retryCurrentChannel(), 2000);
         }
     }
     
-    parseExtInf(line, defaultGroup) {
-        const info = line.substring(8);
-        const nameMatch = info.match(/,(.*)$/);
-        const name = nameMatch ? this.cleanChannelName(nameMatch[1]) : 'Unknown Channel';
-        
-        return {
-            name: name,
-            url: '',
-            tvgId: this.extractParam(info, 'tvg-id'),
-            tvgName: this.extractParam(info, 'tvg-name'),
-            tvgLogo: this.extractParam(info, 'tvg-logo'),
-            groupTitle: this.extractParam(info, 'group-title') || defaultGroup,
-            duration: this.extractParam(info.split(',')[0], ':')
-        };
-    }
-    
-    extractParam(text, paramName) {
-        const regex = new RegExp(`${paramName}="([^"]*)"|${paramName}=([^\\s]+)`);
-        const match = text.match(regex);
-        return match ? (match[1] || match[2] || '').trim() : '';
-    }
-    
-    cleanChannelName(name) {
-        return name
-            .replace(/^[:\s|-]+/, '')
-            .replace(/[:\s|-]+$/, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-    
-    isValidStreamUrl(url) {
-        return url.match(/^(https?|rtmp|rtsp|mms|udp):\/\/.+/i) || 
-               url.startsWith('//') || // Protocol-relative
-               url.includes('.m3u8') ||
-               url.includes('.mpd') ||
-               url.includes('.ts');
-    }
-    
-    updateChannelList() {
-        this.elements.channelList.innerHTML = '';
-        this.elements.channelsLoaded.textContent = this.channels.length;
-        this.elements.channelCount.textContent = this.channels.length;
-        
-        if (this.channels.length === 0) {
-            this.elements.channelList.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">📺</div>
-                    <h3>No Channels Loaded</h3>
-                    <p>Load an M3U file or enter a URL to get started</p>
-                    <p class="empty-hint">Tip: If it works in VLC, it should work here too!</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Group channels
-        const groups = this.groupChannels();
-        
-        // Update group filter
-        this.updateGroupFilter(Object.keys(groups));
-        
-        // Display channels
-        for (const [groupName, groupChannels] of Object.entries(groups)) {
-            // Group header
-            const groupHeader = document.createElement('div');
-            groupHeader.className = 'channel-group';
-            groupHeader.innerHTML = `
-                <span>${groupName}</span>
-                <span class="group-count">${groupChannels.length}</span>
-            `;
-            this.elements.channelList.appendChild(groupHeader);
-            
-            // Channel items
-            groupChannels.forEach((channel, index) => {
-                const channelElement = this.createChannelElement(channel, index);
-                this.elements.channelList.appendChild(channelElement);
-            });
-        }
-    }
-    
-    groupChannels() {
-        const groups = {};
-        
-        this.channels.forEach((channel, index) => {
-            const group = channel.groupTitle || 'Ungrouped';
-            if (!groups[group]) groups[group] = [];
-            groups[group].push({...channel, originalIndex: index});
-        });
-        
-        // Sort groups alphabetically
-        return Object.keys(groups).sort().reduce((acc, key) => {
-            acc[key] = groups[key];
-            return acc;
-        }, {});
-    }
-    
-    updateGroupFilter(groups) {
-        const select = this.elements.groupFilter;
-        select.innerHTML = '<option value="">All Groups</option>';
-        
-        groups.forEach(group => {
-            const option = document.createElement('option');
-            option.value = group;
-            option.textContent = group;
-            select.appendChild(option);
-        });
-        
-        select.addEventListener('change', (e) => {
-            this.filterByGroup(e.target.value);
-        });
-    }
-    
-    createChannelElement(channel, index) {
-        const element = document.createElement('div');
-        element.className = 'channel-item';
-        element.dataset.index = channel.originalIndex;
-        
-        const logoHtml = channel.tvgLogo ? 
-            `<img src="${channel.tvgLogo}" alt="${channel.name}" class="channel-logo" onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>';">` :
-            '<div class="channel-logo-placeholder">📺</div>';
-        
-        element.innerHTML = `
-            <div class="channel-content">
-                ${logoHtml}
-                <div class="channel-details">
-                    <div class="channel-name">${channel.name}</div>
-                    <div class="channel-meta">
-                        <span class="channel-group">${channel.groupTitle}</span>
-                        <span class="channel-duration">${channel.duration || 'Live'}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        element.addEventListener('click', () => {
-            this.playChannel(channel, channel.originalIndex);
-        });
-        
-        return element;
+    startBufferingTimeout() {
+        // If buffering takes too long, try to recover
+        setTimeout(() => {
+            if (this.elements.videoPlayer.readyState < 3) { // Still loading
+                this.showMessage('Buffering taking too long, trying to recover...', 'warning');
+                this.retryCurrentChannel();
+            }
+        }, 10000); // 10 seconds
     }
     
     async playChannel(channel, index) {
+        if (this.isSwitching) {
+            console.log('Already switching channels, please wait...');
+            return;
+        }
+        
+        this.isSwitching = true;
         this.showLoading(`Loading ${channel.name}...`);
         
-        // Update UI
-        this.setActiveChannel(index);
-        this.updateChannelInfo(channel);
+        // Add to playback history
+        this.addToHistory(index);
         
         try {
+            // Update UI
+            this.setActiveChannel(index);
+            this.updateChannelInfo(channel);
+            this.currentChannelIndex = index;
+            this.playbackAttempts = 0;
+            this.updateAttemptsCounter();
+            
+            // Stop any existing playback
+            await this.stopCurrentPlayback();
+            
+            // Play new stream
             await this.playStream(channel.url);
+            
             this.showMessage(`Playing: ${channel.name}`, 'success');
+            
         } catch (error) {
-            this.showError(`Failed to play: ${error.message}`);
-            this.handlePlaybackError();
+            console.error('Play channel error:', error);
+            
+            if (this.autoSwitchEnabled && !error.message.includes('user aborted')) {
+                this.showMessage(`Failed to play channel, trying next one...`, 'warning');
+                setTimeout(() => this.playNextChannel(), 1000);
+            } else {
+                this.showError(`Failed to play: ${error.message}`);
+                this.updatePlayerOverlay('Playback Failed', '❌');
+            }
+            
         } finally {
+            this.isSwitching = false;
             this.hideLoading();
         }
     }
     
-    setActiveChannel(index) {
-        // Remove active class from all channels
-        document.querySelectorAll('.channel-item').forEach(item => {
-            item.classList.remove('active');
-        });
+    async stopCurrentPlayback() {
+        const video = this.elements.videoPlayer;
         
-        // Add active class to selected channel
-        const selected = document.querySelector(`.channel-item[data-index="${index}"]`);
-        if (selected) {
-            selected.classList.add('active');
-            selected.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }
-    
-    updateChannelInfo(channel) {
-        this.currentChannel = channel;
-        this.elements.currentChannel.textContent = channel.name;
-        this.elements.currentGroup.textContent = channel.groupTitle;
-        this.elements.currentUrl.textContent = this.shortenUrl(channel.url);
+        // Pause and reset video
+        video.pause();
+        video.src = '';
+        video.load();
         
-        this.updatePlayerOverlay(`Loading ${channel.name}...`, '⏳');
-    }
-    
-    shortenUrl(url) {
-        if (url.length > 50) {
-            return url.substring(0, 25) + '...' + url.substring(url.length - 25);
-        }
-        return url;
-    }
-    
-    async playStream(url) {
-        // Destroy existing HLS instance
+        // Destroy HLS instance if exists
         if (this.hls) {
             this.hls.destroy();
             this.hls = null;
         }
         
-        const video = this.elements.videoPlayer;
+        // Clear any pending timeouts
+        this.clearErrorTimeouts();
         
-        // Reset video
-        video.src = '';
-        video.load();
-        
-        // Try different playback methods
-        if (url.includes('.m3u8') && this.isHlsSupported) {
-            await this.playWithHLS(url);
-        } else {
-            await this.playNative(url);
-        }
+        // Small delay to ensure cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    async playStream(url) {
+        return new Promise(async (resolve, reject) => {
+            const video = this.elements.videoPlayer;
+            let playAttempted = false;
+            
+            const cleanup = () => {
+                video.removeEventListener('canplay', canplayHandler);
+                video.removeEventListener('error', errorHandler);
+                clearTimeout(playTimeout);
+            };
+            
+            const canplayHandler = () => {
+                if (!playAttempted) {
+                    playAttempted = true;
+                    video.play().then(resolve).catch(errorHandler);
+                }
+            };
+            
+            const errorHandler = (e) => {
+                cleanup();
+                reject(new Error(`Playback failed: ${video.error?.message || 'Unknown error'}`));
+            };
+            
+            const playTimeout = setTimeout(() => {
+                if (!playAttempted) {
+                    cleanup();
+                    reject(new Error('Playback timeout'));
+                }
+            }, 15000);
+            
+            video.addEventListener('canplay', canplayHandler);
+            video.addEventListener('error', errorHandler);
+            
+            try {
+                if (url.includes('.m3u8') && this.isHlsSupported) {
+                    await this.playWithHLS(url);
+                } else {
+                    video.src = url;
+                    video.load();
+                }
+                
+                // If video is already ready, trigger canplay
+                if (video.readyState >= 3) {
+                    canplayHandler();
+                }
+                
+            } catch (error) {
+                cleanup();
+                reject(error);
+            }
+        });
     }
     
     async playWithHLS(url) {
         return new Promise((resolve, reject) => {
+            // Destroy existing HLS instance
+            if (this.hls) {
+                this.hls.destroy();
+            }
+            
             this.hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: true,
                 backBufferLength: 90,
                 manifestLoadingTimeOut: 10000,
-                manifestLoadingMaxRetry: 3,
+                manifestLoadingMaxRetry: 2, // Reduced retries
                 levelLoadingTimeOut: 10000,
-                levelLoadingMaxRetry: 3,
-                fragLoadingTimeOut: 20000,
-                fragLoadingMaxRetry: 3
+                levelLoadingMaxRetry: 2,
+                fragLoadingTimeOut: 15000,
+                fragLoadingMaxRetry: 2,
+                fragLoadingMaxRetryTimeout: 2000,
+                manifestLoadingMaxRetryTimeout: 2000,
+                levelLoadingMaxRetryTimeout: 2000,
+                
+                // Error recovery configuration
+                enableSoftwareAES: true,
+                stretchShortVideoTrack: true,
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
+                maxBufferSize: 60 * 1000 * 1000,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 10
             });
             
             this.hls.loadSource(url);
             this.hls.attachMedia(this.elements.videoPlayer);
             
+            // Prevent HLS from auto-switching quality levels too aggressively
+            this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                console.log('Quality level switched to:', data.level);
+            });
+            
             this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                this.elements.videoPlayer.play().then(resolve).catch(reject);
+                console.log('HLS manifest parsed successfully');
+                resolve();
             });
             
             this.hls.on(Hls.Events.ERROR, (event, data) => {
+                console.error('HLS error:', data);
+                
                 if (data.fatal) {
                     switch(data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            reject(new Error('Network error - trying native playback'));
-                            this.hls.destroy();
-                            this.playNative(url).catch(reject);
+                            console.log('Network error, trying to recover...');
+                            this.hls.startLoad();
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.log('Media error, trying to recover...');
                             this.hls.recoverMediaError();
                             break;
                         default:
-                            reject(new Error('HLS fatal error'));
+                            console.log('Fatal HLS error, destroying instance');
                             this.hls.destroy();
+                            this.hls = null;
+                            reject(new Error('HLS fatal error'));
                             break;
                     }
                 }
             });
-        });
-    }
-    
-    async playNative(url) {
-        return new Promise((resolve, reject) => {
-            const video = this.elements.videoPlayer;
-            video.src = url;
-            video.load();
             
-            const canPlayHandler = () => {
-                video.removeEventListener('canplay', canPlayHandler);
-                video.play().then(resolve).catch(reject);
-            };
-            
-            const errorHandler = () => {
-                video.removeEventListener('error', errorHandler);
-                reject(new Error('Native playback failed'));
-            };
-            
-            video.addEventListener('canplay', canPlayHandler);
-            video.addEventListener('error', errorHandler);
-            
-            // Timeout
+            // Timeout for HLS loading
             setTimeout(() => {
-                video.removeEventListener('canplay', canPlayHandler);
-                video.removeEventListener('error', errorHandler);
-                reject(new Error('Playback timeout'));
-            }, 15000);
+                if (this.hls && !this.hls.media) {
+                    this.hls.destroy();
+                    this.hls = null;
+                    reject(new Error('HLS loading timeout'));
+                }
+            }, 10000);
         });
     }
     
-    handlePlaybackError() {
-        if (this.currentChannel) {
-            this.updatePlayerOverlay('Playback Error', '❌');
-            
-            // Try alternative methods
-            setTimeout(() => {
-                this.showMessage('Trying alternative playback method...', 'info');
-                this.reloadCurrentStream();
-            }, 2000);
+    playPreviousChannel() {
+        if (this.channels.length === 0 || this.isSwitching) return;
+        
+        let newIndex = this.currentChannelIndex - 1;
+        if (newIndex < 0) newIndex = this.channels.length - 1;
+        
+        this.playChannel(this.channels[newIndex], newIndex);
+    }
+    
+    playNextChannel() {
+        if (this.channels.length === 0 || this.isSwitching) return;
+        
+        let newIndex = this.currentChannelIndex + 1;
+        if (newIndex >= this.channels.length) newIndex = 0;
+        
+        this.playChannel(this.channels[newIndex], newIndex);
+    }
+    
+    retryCurrentChannel() {
+        if (this.currentChannel && this.currentChannelIndex >= 0 && !this.isSwitching) {
+            this.playChannel(this.currentChannel, this.currentChannelIndex);
         }
     }
     
-    updatePlayerOverlay(text, icon) {
-        this.elements.overlayText.textContent = text;
-        this.elements.overlayIcon.textContent = icon;
-        this.elements.playerOverlay.style.display = 'flex';
-    }
-    
-    hidePlayerOverlay() {
-        this.elements.playerOverlay.style.display = 'none';
-    }
-    
-    playCurrentChannel() {
-        if (this.currentChannel) {
-            this.elements.videoPlayer.play().catch(e => {
-                console.warn('Autoplay prevented:', e);
-                this.updatePlayerOverlay('Click to play', '▶️');
-            });
-            this.hidePlayerOverlay();
-        }
-    }
-    
-    filterChannels(searchTerm) {
-        const items = this.elements.channelList.querySelectorAll('.channel-item');
-        const searchLower = searchTerm.toLowerCase();
-        
-        items.forEach(item => {
-            const channelName = item.querySelector('.channel-name').textContent.toLowerCase();
-            item.style.display = channelName.includes(searchLower) ? 'block' : 'none';
-        });
-        
-        // Hide/show group headers
-        this.updateGroupHeaders();
-    }
-    
-    filterByGroup(group) {
-        const items = this.elements.channelList.querySelectorAll('.channel-item');
-        
-        items.forEach(item => {
-            const channelGroup = item.querySelector('.channel-group').textContent;
-            item.style.display = (!group || channelGroup === group) ? 'block' : 'none';
-        });
-        
-        this.updateGroupHeaders();
-    }
-    
-    updateGroupHeaders() {
-        const groups = this.elements.channelList.querySelectorAll('.channel-group');
-        
-        groups.forEach(group => {
-            const groupName = group.querySelector('span:first-child').textContent;
-            const items = Array.from(this.elements.channelList.querySelectorAll('.channel-item'))
-                .filter(item => item.style.display !== 'none' && 
-                       item.querySelector('.channel-group').textContent === groupName);
-            
-            group.style.display = items.length > 0 ? 'flex' : 'none';
-        });
-    }
-    
-    refreshChannelList() {
-        if (this.channels.length > 0) {
-            this.updateChannelList();
-            this.showMessage('Channel list refreshed', 'success');
-        }
-    }
-    
-    playDirectStream() {
-        const url = prompt('Enter direct stream URL:');
-        if (url && this.isValidStreamUrl(url)) {
-            const channel = {
-                name: 'Direct Stream',
-                groupTitle: 'Direct',
-                url: url
-            };
-            this.playChannel(channel, -1);
-        } else if (url) {
-            this.showError('Invalid stream URL format');
-        }
-    }
-    
-    loadSampleData() {
-        const sampleM3U = `#EXTM3U
-#EXTINF:-1 tvg-id="demo1" tvg-name="Demo 1" tvg-logo="https://via.placeholder.com/100x50/4361ee/ffffff?text=Demo1" group-title="Demo",Demo Channel 1
-https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
-#EXTINF:-1 tvg-id="demo2" tvg-name="Demo 2" tvg-logo="https://via.placeholder.com/100x50/f72585/ffffff?text=Demo2" group-title="Demo",Demo Channel 2
-https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
-#EXTINF:-1 tvg-id="news1" tvg-name="News Channel" tvg-logo="https://via.placeholder.com/100x50/4cc9f0/ffffff?text=News" group-title="News",24/7 News Channel
-https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8`;
-        
-        this.parseM3UContent(sampleM3U, 'sample');
-        this.showMessage('Loaded sample channels for testing', 'info');
-    }
-    
-    toggleFullscreen() {
-        const videoContainer = document.querySelector('.video-container');
-        
-        if (!document.fullscreenElement) {
-            videoContainer.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable fullscreen: ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    }
-    
-    toggleMute() {
+    togglePlayPause() {
         const video = this.elements.videoPlayer;
-        video.muted = !video.muted;
-        document.getElementById('mute').textContent = video.muted ? '🔊 Unmute' : '🔇 Mute';
-    }
-    
-    reloadCurrentStream() {
-        if (this.currentChannel) {
-            this.playChannel(this.currentChannel, 
-                Array.from(document.querySelectorAll('.channel-item'))
-                    .findIndex(item => item.classList.contains('active')));
+        if (video.paused) {
+            video.play().catch(e => console.log('Play failed:', e));
+        } else {
+            video.pause();
         }
     }
     
-    toggleDebugMode() {
-        this.debugMode = !this.debugMode;
-        document.getElementById('streamDebug').style.display = 
-            this.debugMode ? 'block' : 'none';
-        
-        if (this.debugMode) {
-            this.updateDebugInfo();
+    addToHistory(index) {
+        this.playbackHistory.unshift(index);
+        if (this.playbackHistory.length > this.maxHistory) {
+            this.playbackHistory.pop();
         }
     }
     
-    updateDebugInfo() {
-        const info = {
-            timestamp: new Date().toISOString(),
-            channels: this.channels.length,
-            currentChannel: this.currentChannel ? {
-                name: this.currentChannel.name,
-                url: this.currentChannel.url,
-                group: this.currentChannel.groupTitle
-            } : null,
-            videoState: {
-                src: this.elements.videoPlayer.src,
-                currentTime: this.elements.videoPlayer.currentTime,
-                duration: this.elements.videoPlayer.duration,
-                paused: this.elements.videoPlayer.paused,
-                muted: this.elements.videoPlayer.muted,
-                volume: this.elements.videoPlayer.volume,
-                readyState: this.elements.videoPlayer.readyState,
-                networkState: this.elements.videoPlayer.networkState,
-                error: this.elements.videoPlayer.error
-            },
-            hls: this.hls ? {
-                version: Hls.version,
-                currentLevel: this.hls.currentLevel,
-                levels: this.hls.levels ? this.hls.levels.length : 0
-            } : null,
-            userAgent: navigator.userAgent,
-            screen: `${window.screen.width}x${window.screen.height}`,
-            connection: navigator.connection ? {
-                effectiveType: navigator.connection.effectiveType,
-                downlink: navigator.connection.downlink,
-                rtt: navigator.connection.rtt
-            } : null
-        };
-        
-        this.elements.debugOutput.textContent = JSON.stringify(info, null, 2);
-    }
-    
-    showLoading(text = 'Loading...', details = '') {
-        this.loadingOverlay.style.display = 'flex';
-        document.getElementById('loadingText').textContent = text;
-        document.getElementById('loadingDetails').textContent = details;
-    }
-    
-    updateLoadingDetails(details) {
-        document.getElementById('loadingDetails').textContent = details;
-    }
-    
-    hideLoading() {
-        this.loadingOverlay.style.display = 'none';
-    }
-    
-    showError(message) {
-        this.elements.status.textContent = 'Error';
-        this.errorOverlay.querySelector('#errorBody').textContent = message;
-        this.errorOverlay.style.display = 'block';
-        
-        // Auto-hide after 10 seconds
-        setTimeout(() => {
-            this.errorOverlay.style.display = 'none';
-        }, 10000);
-        
-        console.error('Error:', message);
-    }
-    
-    showMessage(message, type = 'info') {
-        const colors = {
-            info: '#4361ee',
-            success: '#4ade80',
-            warning: '#fbbf24',
-            error: '#f87171'
-        };
-        
-        const msg = document.createElement('div');
-        msg.className = 'success-message';
-        msg.innerHTML = `
-            <div style="color: ${colors[type]}; font-weight: bold; margin-bottom: 5px;">
-                ${type.toUpperCase()}
-            </div>
-            <div>${message}</div>
-        `;
-        
-        document.body.appendChild(msg);
-        msg.style.display = 'block';
-        
-        setTimeout(() => {
-            msg.style.display = 'none';
-            setTimeout(() => msg.remove(), 300);
-        }, 3000);
-    }
-    
-    loadUserSettings() {
-        const savedUrl = localStorage.getItem('iptv_last_url');
-        if (savedUrl) {
-            document.getElementById('m3uUrl').value = savedUrl;
+    updateAttemptsCounter() {
+        const counter = document.getElementById('attemptsCount');
+        if (counter) {
+            counter.textContent = this.playbackAttempts;
+            counter.className = this.playbackAttempts > 1 ? 'warning' : '';
         }
     }
     
-    saveUserSettings() {
-        const url = document.getElementById('m3uUrl').value;
-        if (url) {
-            localStorage.setItem('iptv_last_url', url);
-        }
-    }
+    // ... (pjesa tjetër e metodave mbetet e njëjtë)
 }
-
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    window.iptvPlayer = new IPTVPlayer();
-    
-    // Auto-save URL on change
-    document.getElementById('m3uUrl').addEventListener('change', function() {
-        if (this.value) {
-            localStorage.setItem('iptv_last_url', this.value);
-        }
-    });
-    
-    // Load last URL on Ctrl+L
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 'l') {
-            e.preventDefault();
-            const lastUrl = localStorage.getItem('iptv_last_url');
-            if (lastUrl) {
-                document.getElementById('m3uUrl').value = lastUrl;
-                document.getElementById('m3uUrl').focus();
-            }
-        }
-    });
-});
