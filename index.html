@@ -6,6 +6,76 @@
     <title>IPTV Player Pro</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Shto këto stile -->
+<style>
+    /* Toast notifications */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4caf50;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        z-index: 10000;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
+    /* M3U file upload improvements */
+    .file-upload {
+        position: relative;
+        margin: 10px 0;
+    }
+    
+    .file-upload input[type="file"] {
+        display: none;
+    }
+    
+    .file-upload label {
+        display: block;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px dashed rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.7);
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .file-upload label:hover {
+        border-color: #2196f3;
+        color: #2196f3;
+        background: rgba(33, 150, 243, 0.1);
+    }
+    
+    .file-upload i {
+        margin-right: 8px;
+    }
+</style>
 </head>
 <body>
     <div class="app-container">
