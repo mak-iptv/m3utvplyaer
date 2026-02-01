@@ -816,3 +816,312 @@ video {
     box-shadow: 0 5px 20px rgba(40, 167, 69, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
+/* Playback Controls */
+.playback-controls {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-row {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+/* Switch Toggle */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    margin-right: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #4361ee;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.switch-label {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-left: 10px;
+}
+
+/* Buttons in controls */
+.playback-controls .btn-small {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #4361ee;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+}
+
+.playback-controls .btn-small:hover {
+    background: #4361ee;
+    transform: translateY(-1px);
+}
+
+#retryChannel {
+    background: rgba(247, 37, 133, 0.2);
+    border-color: #f72585;
+}
+
+#retryChannel:hover {
+    background: #f72585;
+}
+
+/* Attempts Counter */
+.attempts-counter {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #aaa;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.attempts-counter span {
+    font-weight: bold;
+    color: #4cc9f0;
+}
+
+.attempts-counter span.warning {
+    color: #f8961e;
+}
+
+.attempts-counter span.danger {
+    color: #f72585;
+}
+
+/* Player States */
+.player-state-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.state-playing {
+    background-color: #4ade80;
+    box-shadow: 0 0 10px #4ade80;
+}
+
+.state-buffering {
+    background-color: #fbbf24;
+    animation: pulse 1s infinite;
+}
+
+.state-error {
+    background-color: #f87171;
+    animation: pulse 0.5s infinite;
+}
+
+.state-paused {
+    background-color: #9ca3af;
+}
+
+/* Loading Animation for Switching */
+.switching-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10002;
+}
+
+.switching-content {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 30px;
+    border-radius: 15px;
+    border: 2px solid #4361ee;
+}
+
+.switching-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #4361ee;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+.switching-text {
+    color: #4cc9f0;
+    font-size: 1.1rem;
+}
+
+/* History Panel */
+.history-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #4361ee;
+    max-width: 300px;
+    display: none;
+    z-index: 1000;
+}
+
+.history-panel h4 {
+    color: #4cc9f0;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-item {
+    padding: 8px 10px;
+    margin: 5px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.history-item:hover {
+    background: rgba(67, 97, 238, 0.2);
+}
+
+.history-item.current {
+    border-left: 3px solid #4361ee;
+    background: rgba(67, 97, 238, 0.1);
+}
+
+/* Keyboard Shortcuts Help */
+.shortcuts-help {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #f72585;
+    max-width: 250px;
+    display: none;
+    z-index: 1000;
+}
+
+.shortcuts-help h4 {
+    color: #f72585;
+    margin-bottom: 10px;
+}
+
+.shortcut-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shortcut-key {
+    color: #4cc9f0;
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.shortcut-description {
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+/* Animations */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.channel-switch-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(67, 97, 238, 0.9);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    display: none;
+    animation: slideIn 0.3s ease;
+    z-index: 10001;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .control-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .playback-controls .btn-small {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .switch {
+        margin-bottom: 10px;
+    }
+}
