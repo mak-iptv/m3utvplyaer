@@ -3,59 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTV Player</title>
+    <title>IPTV Player - Works with VLC Lists</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📺 IPTV Player</h1>
-            <!-- Shto këto butona në controls div -->
-<div class="controls">
-    <input type="file" id="m3uFile" accept=".m3u,.m3u8" hidden>
-    <button id="loadM3U">📂 Load M3U File</button>
-    <button id="loadURL">🔗 Load from URL</button>
-    <button id="playDirect">🎬 Play Direct URL</button>
-    <input type="text" id="m3uUrl" placeholder="Enter M3U URL (http://...)">
-</div>
+            <h1>📺 IPTV Player (VLC Compatible)</h1>
+            <div class="controls">
+                <div class="control-group">
+                    <input type="file" id="m3uFile" accept=".m3u,.m3u8,.txt" hidden>
+                    <button id="loadM3U" class="btn-primary">
+                        <span class="btn-icon">📂</span>
+                        Load M3U File
+                    </button>
+                    <div class="file-info" id="fileInfo">No file selected</div>
+                </div>
+                
+                <div class="control-group">
+                    <button id="loadURL" class="btn-secondary">
+                        <span class="btn-icon">🔗</span>
+                        Load from URL
+                    </button>
+                    <input type="text" id="m3uUrl" placeholder="Paste M3U URL here...">
+                </div>
+                
+                <div class="control-group">
+                    <button id="loadSample" class="btn-info">
+                        <span class="btn-icon">🎬</span>
+                        Load Sample
+                    </button>
+                    <button id="playDirect" class="btn-warning">
+                        <span class="btn-icon">🎯</span>
+                        Play Direct Stream
+                    </button>
+                </div>
+            </div>
+            
+            <div class="advanced-options" id="advancedOptions">
+                <h3>⚙️ Advanced Options</h3>
+                <div class="options-grid">
+                    <div class="option">
+                        <label for="userAgent">User Agent:</label>
+                        <select id="userAgent">
+                            <option value="chrome">Chrome</option>
+                            <option value="firefox">Firefox</option>
+                            <option value="vlc">VLC Media Player</option>
+                            <option value="mobile">Mobile</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="option">
+                        <label for="corsMode">CORS Mode:</label>
+                        <select id="corsMode">
+                            <option value="proxy">Use Proxy (Recommended)</option>
+                            <option value="direct">Direct Fetch</option>
+                            <option value="nocors">No-CORS</option>
+                        </select>
+                    </div>
+                    <div class="option">
+                        <label for="timeout">Timeout (seconds):</label>
+                        <input type="number" id="timeout" value="10" min="5" max="60">
+                    </div>
+                    <div class="option">
+                        <label>
+                            <input type="checkbox" id="autoPlay" checked>
+                            Auto-play first channel
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="auth-section" id="authSection">
+                    <h4>🔐 Authentication (if required)</h4>
+                    <div class="auth-fields">
+                        <input type="text" id="authUsername" placeholder="Username">
+                        <input type="password" id="authPassword" placeholder="Password">
+                        <button id="applyAuth" class="btn-small">Apply</button>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <div class="main">
             <div class="channel-list">
-                <h2>Channels</h2>
-                <div id="channelSearch">
-                    <input type="text" id="searchInput" placeholder="Search channels...">
+                <div class="list-header">
+                    <h2>📺 Channels 
+                        <span class="channel-count" id="channelCount">0</span>
+                    </h2>
+                    <div class="list-controls">
+                        <input type="text" id="searchInput" placeholder="Search channels...">
+                        <select id="groupFilter">
+                            <option value="">All Groups</option>
+                        </select>
+                        <button id="refreshList" title="Refresh">🔄</button>
+                    </div>
                 </div>
-                <div id="channelList" class="channel-list-container">
-                    <!-- Channels will be loaded here -->
+                
+                <div class="channel-list-container">
+                    <div id="channelList">
+                        <!-- Channels will be loaded here -->
+                        <div class="empty-state">
+                            <div class="empty-icon">📺</div>
+                            <h3>No Channels Loaded</h3>
+                            <p>Load an M3U file or enter a URL to get started</p>
+                            <p class="empty-hint">Tip: If it works in VLC, it should work here too!</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="player-section">
-                <div class="video-container">
-                    <video id="videoPlayer" controls>
-                        <source src="" type="application/x-mpegURL">
-                        Your browser does not support the video tag.
-                    </video>
+                <div class="player-header">
+                    <h2>🎬 Player</h2>
+                    <div class="player-controls">
+                        <button id="fullscreen" class="btn-small">⛶ Fullscreen</button>
+                        <button id="mute" class="btn-small">🔇 Mute</button>
+                        <button id="reloadStream" class="btn-small">🔄 Reload</button>
+                    </div>
                 </div>
+                
+                <div class="video-container">
+                    <video id="videoPlayer" controls playsinline>
+                        <source src="" type="application/x-mpegURL">
+                        Your browser does not support HTML5 video.
+                    </video>
+                    <div class="player-overlay" id="playerOverlay">
+                        <div class="overlay-content">
+                            <div class="overlay-icon" id="overlayIcon">▶️</div>
+                            <div class="overlay-text" id="overlayText">Click to load channel</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="player-info">
-                    <h3 id="currentChannel">No channel selected</h3>
+                    <div class="current-channel">
+                        <h3 id="currentChannel">No channel selected</h3>
+                        <div class="channel-meta">
+                            <span class="meta-item" id="currentGroup">-</span>
+                            <span class="meta-item" id="currentUrl">-</span>
+                        </div>
+                    </div>
+                    
                     <div class="quality-controls">
                         <select id="qualitySelect">
                             <option value="">Auto Quality</option>
                         </select>
+                        <div class="stream-info">
+                            <span id="streamStatus">Ready</span>
+                            <span class="buffer-indicator" id="bufferIndicator"></span>
+                        </div>
                     </div>
+                </div>
+                
+                <div class="stream-debug" id="streamDebug">
+                    <h4>🔧 Stream Debug Info</h4>
+                    <pre id="debugOutput">No debug information available</pre>
                 </div>
             </div>
         </div>
 
         <div class="info-panel">
-            <h3>Information</h3>
-            <p>Load an M3U file or enter a URL to start watching</p>
-            <p id="status">Ready</p>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span id="status" class="status-value">Ready</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Channels:</span>
+                    <span id="channelsLoaded" class="status-value">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Player:</span>
+                    <span id="playerState" class="status-value">Idle</span>
+                </div>
+                <div class="status-item">
+                    <button id="toggleDebug" class="btn-small">📋 Toggle Debug</button>
+                </div>
+            </div>
+            
+            <div class="tips">
+                <h3>💡 Tips for VLC-Compatible Lists:</h3>
+                <ul>
+                    <li>If your list works in VLC but not here, try loading it from a file instead of URL</li>
+                    <li>For private lists, use the authentication section above</li>
+                    <li>Some streams may require HLS.js - it will load automatically if needed</li>
+                    <li>Use "Play Direct Stream" for testing individual stream URLs</li>
+                </ul>
+            </div>
         </div>
     </div>
 
+    <!-- HLS.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="script.js"></script>
 </body>
 </html>
