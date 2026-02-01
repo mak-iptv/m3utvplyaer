@@ -4,124 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IPTV Player Pro</title>
-
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        .toast-notification{
-            position:fixed;top:20px;right:20px;
-            background:#4caf50;color:#fff;
-            padding:14px 22px;border-radius:8px;
-            z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3)
-        }
-        .file-upload input{display:none}
-        .file-upload label{
-            display:block;padding:12px;
-            border:2px dashed rgba(255,255,255,.2);
-            border-radius:8px;text-align:center;
-            cursor:pointer
-        }
-    </style>
 </head>
-
 <body>
-<div class="app-container">
-
-<header class="main-header">
-    <div class="logo">
-        <i class="fas fa-tv"></i> IPTV<span class="logo-highlight">PRO</span>
-    </div>
-    <div class="header-info">
-        <span class="status online"><i class="fas fa-circle"></i> Online</span>
-        <span id="currentTime">00:00:00</span>
-    </div>
-</header>
-
-<div class="main-content">
-
-<!-- PLAYER -->
-<div class="player-section">
-    <div class="video-wrapper">
-
-        <video
-            id="mainVideo"
-            autoplay
-            muted
-            playsinline
-            webkit-playsinline
-            preload="auto">
-        </video>
-
-        <div class="loading-spinner" id="loadingSpinner">
-            <div class="spinner"></div>
-            <p>Duke ngarkuar…</p>
+    <div class="app-container">
+        <!-- Video Player Section -->
+        <div class="player-section">
+            <video id="mainVideo" autoplay playsinline></video>
         </div>
 
-        <div class="error-message" id="errorMessage" style="display:none">
-            <i class="fas fa-exclamation-triangle"></i>
-            <h4>Error stream</h4>
-            <button id="retryStreamBtn">Riprovoni</button>
-        </div>
-
-        <div class="controls-overlay">
-            <button id="playPauseBtn"><i class="fas fa-play"></i></button>
-            <button id="prevChannelBtn"><i class="fas fa-step-backward"></i></button>
-            <button id="nextChannelBtn"><i class="fas fa-step-forward"></i></button>
-
-            <div class="volume-control-overlay">
-                <input type="range" id="volumeSliderOverlay" min="0" max="100" value="100">
+        <!-- Channels Sidebar -->
+        <div class="sidebar">
+            <h3>Kanale</h3>
+            <div class="channels-container">
+                <div id="channelsGrid" class="channels-grid"></div>
             </div>
         </div>
-
-        <div class="channel-info-overlay">
-            <h3 id="channelNameOverlay">Zgjidhni një kanal</h3>
-        </div>
-
-    </div>
-</div>
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-
-<div class="connection-panel">
-    <h3>Lidhja</h3>
-
-    <div class="connection-form">
-        <input id="xtreamServer" placeholder="http://server:port">
-        <input id="xtreamUsername" placeholder="Username">
-        <input id="xtreamPassword" type="password" placeholder="Password">
-
-        <button id="connectBtn">Lidhu</button>
-        <button id="demoBtn">Demo</button>
     </div>
 
-    <div class="connection-form">
-        <input id="m3uUrl" placeholder="M3U URL">
-        <div class="file-upload">
-            <input type="file" id="m3uFile" accept=".m3u,.m3u8">
-            <label for="m3uFile">Ngarko M3U</label>
-        </div>
-        <button id="loadM3uBtn">Ngarko</button>
-    </div>
-</div>
-
-<div class="channels-panel">
-    <h3>Kanale</h3>
-    <div id="channelsGrid"></div>
-</div>
-
-</div>
-</div>
-
-<footer class="status-bar">
-    <span>Uptime: <span id="uptime">00:00:00</span></span>
-</footer>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<script src="script.js"></script>
-
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="script.js"></script>
 </body>
 </html>
