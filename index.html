@@ -1,216 +1,43 @@
 <!DOCTYPE html>
-<html lang="sq">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>IBO IPTV Player</title>
-<style>
-body {
-    margin:0;
-    font-family: Arial, sans-serif;
-    background: #1a1a2e;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-}
-#player {
-    width: 100%;
-    height: 350px;
-    background: black;
-}
-.controls {
-    display:flex;
-    gap:10px;
-    padding:10px;
-    background:#111;
-}
-.controls input {
-    flex:1;
-    padding:5px;
-    border-radius:5px;
-    border:none;
-}
-.controls button {
-    padding:5px 10px;
-    border-radius:5px;
-    border:none;
-    cursor:pointer;
-    background:#00ff88;
-    color:black;
-    font-weight:bold;
-}
-.container {
-    display:flex;
-    flex:1;
-    transition: all 0.3s ease;
-}
-.sidebar {
-    width:220px;
-    background:#111;
-    padding:10px;
-    overflow-y:auto;
-    transition: all 0.3s ease;
-}
-.sidebar.hide {
-    width:0;
-    padding:0;
-    overflow:hidden;
-}
-.sidebar div {
-    padding:10px;
-    cursor:pointer;
-    margin-bottom:5px;
-    border-radius:5px;
-}
-.sidebar div:hover {
-    background:#00ff88;
-    color:black;
-}
-.channels {
-    flex:1;
-    display:grid;
-    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
-    gap:10px;
-    padding:10px;
-    overflow-y:auto;
-}
-.channel {
-    background:#222;
-    padding:10px;
-    border-radius:5px;
-    cursor:pointer;
-    text-align:center;
-}
-.channel:hover {
-    background:#00ff88;
-    color:black;
-}
-.channel img {
-    width:50px;
-    height:50px;
-    border-radius:50%;
-    margin-bottom:5px;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>IPTV WEB Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Include HLS.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-<video id="player" controls></video>
-
-<div class="controls">
-    <input type="text" id="m3uUrl" placeholder="Ngarko URL M3U këtu">
-    <button onclick="loadM3U()">Ngarko M3U</button>
-</div>
-
-<div class="controls">
-    <input type="text" id="server" placeholder="Server Xtream">
-    <input type="text" id="user" placeholder="Përdorues">
-    <input type="text" id="pass" placeholder="Fjalëkalim">
-    <button onclick="loginXtream()">Ngarko Xtream</button>
-</div>
-
-<div class="container">
-    <div class="sidebar" id="sidebar"></div>
-    <div class="channels" id="channels"></div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<script>
-let channels = [];
-let currentChannel = null;
-
-// ==== FUNKSIONET ====
-function renderSidebar(){
-    const sb = document.getElementById("sidebar");
-    sb.innerHTML="";
-    const cats = [...new Set(channels.map(c=>c.cat))];
-    cats.forEach(cat=>{
-        const d = document.createElement("div");
-        d.innerText=cat;
-        d.onclick=()=>filter(cat);
-        sb.appendChild(d);
-    });
-    setTimeout(()=>sb.classList.add("hide"),1500); // zhduket pas 1.5s
-}
-
-function renderChannels(list=channels){
-    const container = document.getElementById("channels");
-    container.innerHTML="";
-    list.forEach(c=>{
-        const d=document.createElement("div");
-        d.className="channel";
-        d.innerHTML = `<img src="${c.logo}" onerror="this.src='https://img.icons8.com/color/48/000000/tv.png'"><br>${c.name}`;
-        d.onclick=()=>playChannel(c);
-        container.appendChild(d);
-    });
-}
-
-function filter(cat){
-    renderChannels(channels.filter(c=>c.cat===cat));
-}
-
-function playChannel(c){
-    currentChannel=c;
-    const video=document.getElementById("player");
-    if(Hls.isSupported()){
-        const hls=new Hls();
-        hls.loadSource(c.url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, ()=>video.play());
-    } else if(video.canPlayType('application/vnd.apple.mpegurl')){
-        video.src=c.url;
-        video.play();
-    }
-}
-
-// ==== M3U ====
-async function loadM3U(){
-    const url = document.getElementById("m3uUrl").value.trim();
-    if(!url) return alert("Shkruaj URL M3U!");
-    try{
-        const txt = await (await fetch(url)).text();
-        channels = parseM3U(txt);
-        renderSidebar();
-        renderChannels();
-    } catch(e){console.warn(e); alert("Gabim në ngarkimin e M3U");}
-}
-
-function parseM3U(data){
-    let out=[],c={name:"",url:"",cat:"Other",logo:""};
-    data.split("\n").forEach(l=>{
-        if(l.startsWith("#EXTINF")){
-            c.name=l.split(",").pop().trim();
-            c.cat=(l.match(/group-title="([^"]+)"/)||[])[1]||"Other";
-            c.logo=(l.match(/tvg-logo="([^"]+)"/)||[])[1]||"";
-        } else if(l && !l.startsWith("#")){
-            out.push({...c,url:l.trim()});
-            c={name:"",url:"",cat:"Other",logo:""};
-        }
-    });
-    return out;
-}
-
-// ==== XTREAM ====
-async function loginXtream(){
-    const s=document.getElementById("server").value.trim();
-    const u=document.getElementById("user").value.trim();
-    const p=document.getElementById("pass").value.trim();
-    if(!s||!u||!p) return alert("Plotëso të dhënat Xtream!");
-    try{
-        const catsData=await (await fetch(`${s}/player_api.php?username=${u}&password=${p}&action=get_live_categories`)).json();
-        channels=[]; // pastro kanalet për fillim
-        // ngarko kanalet nga cdo kategori
-        for(const cat of catsData){
-            const chs = await (await fetch(`${s}/player_api.php?username=${u}&password=${p}&action=get_live_streams&category_id=${cat.category_id}`)).json();
-            chs.forEach(c=>{
-                channels.push({name:c.name, url:c.stream_url||`${s}/live/${u}/${p}/${c.stream_id}.m3u8`, cat:cat.category_name, logo:c.stream_icon||""});
-            });
-        }
-        renderSidebar();
-        renderChannels();
-    } catch(e){console.warn(e); alert("Gabim në ngarkimin Xtream");}
-}
-</script>
-
+  <header>
+    <!-- Replace "logo.png" with your logo file name -->
+    <img src="logo.png" alt="IPTV Logo">
+    <h1>IPTV WEB Player</h1>
+  </header>
+  <div class="file-input">
+    <p>Upload the .m3u or .m3u8 file of your IPTV channels:</p>
+    <input type="file" id="m3uFile" accept=".m3u, .m3u8">
+    <p>(You can interact with the player using mouse, touch, keyboard, gamepad, or remote control).</p>
+  </div>
+  <div class="main-container">
+    <!-- Player area -->
+    <div class="player-container">
+      <div class="spinner-overlay" id="spinner">
+        <div class="spinner"></div>
+      </div>
+      <video id="videoPlayer" controls></video>
+    </div>
+    <!-- Channel list -->
+    <aside class="channel-list" id="channelList">
+      <div id="channelsContainer">
+        <!-- Channels will be generated dynamically here -->
+      </div>
+    </aside>
+  </div>
+  <footer>
+    © 2025 IPTV WEB Player | By Bocaletto Luca | GPLv3 | All Rights Reserved.
+  </footer>
+  <script src="core.js"></script>
 </body>
 </html>
